@@ -1,0 +1,81 @@
+# Default pipeline configuration for the Technical Drawing Vectorizer.
+# Same input + same config => byte-identical JSON and SVG output.
+
+seed: 0
+precision: 4              # decimal places for JSON/SVG float formatting
+pdf_dpi: 200              # render DPI for PDF page inputs
+
+preprocess:
+  grayscale: true
+  denoise:
+    enabled: true
+    method: "fastNlMeans"   # fastNlMeans | bilateral
+    strength: 10            # h (luminance) for fastNlMeans; d for bilateral
+  contrast:
+    enabled: true
+    clip_limit: 2.0
+    tile_grid_size: [8, 8]
+  threshold:
+    method: "adaptive"      # adaptive | otsu
+    block_size: 31
+    c: 5                    # constant subtracted from mean (adaptive)
+    invert: true            # drawings are dark lines on light bg => lines become 255
+  deskew:
+    enabled: true
+    max_angle: 45.0         # degrees, clamp
+  perspective:
+    enabled: true
+    min_area_ratio: 0.25    # candidate contour area vs image area
+
+geometry:
+  lines:
+    enabled: true
+    rho: 1.0
+    theta_deg: 1.0          # angular resolution in degrees
+    threshold: 60
+    min_line_length: 40
+    max_line_gap: 15
+  circles:
+    enabled: true
+    dp: 1.2
+    min_dist: 60
+    param1: 100
+    param2: 35
+    min_radius: 8
+    max_radius: 0           # 0 => auto (image-based)
+  arcs:
+    enabled: true
+    min_arc_length: 20
+  contours:
+    enabled: true
+    min_area: 80
+    epsilon: 2.0            # polygon approximation epsilon
+
+normalize:
+  merge:
+    collinear_angle_tol: 3.0     # degrees
+    collinear_dist_tol: 4.0      # px
+    duplicate_angle_tol: 3.0
+    duplicate_dist_tol: 4.0
+  snap:
+    endpoint_tol: 6.0        # px; endpoints within this distance snap together
+  filter:
+    min_length: 15           # drop primitives shorter than this
+
+export:
+  svg:
+    stroke_width: 1.0
+    background: "#ffffff"
+    layer_lines: "#1f6feb"
+    layer_circles: "#d1242f"
+    layer_arcs: "#1a7f37"
+    layer_polylines: "#8250df"
+    layer_contours: "#6e7781"
+  dxf:
+    enabled: false           # DXF is an extension; stub only in MVP
+
+metrics:
+  line_angle_tol: 5.0
+  line_endpoint_tol: 8.0
+  circle_center_tol: 8.0
+  circle_radius_tol: 5.0

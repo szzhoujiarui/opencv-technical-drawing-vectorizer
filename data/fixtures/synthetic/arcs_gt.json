@@ -1,0 +1,39 @@
+{
+  "arcs": [
+    {
+      "cx": 200,
+      "cy": 300,
+      "end": 180,
+      "r": 80,
+      "start": 0,
+      "type": "arc"
+    },
+    {
+      "cx": 400,
+      "cy": 250,
+      "end": 315,
+      "r": 100,
+      "start": 45,
+      "type": "arc"
+    },
+    {
+      "cx": 600,
+      "cy": 350,
+      "end": 270,
+      "r": 70,
+      "start": 90,
+      "type": "arc"
+    },
+    {
+      "cx": 300,
+      "cy": 150,
+      "end": 360,
+      "r": 50,
+      "start": 180,
+      "type": "arc"
+    }
+  ],
+  "circles": [],
+  "lines": [],
+  "polylines": []
+}

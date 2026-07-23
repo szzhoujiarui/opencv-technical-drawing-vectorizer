@@ -1,0 +1,66 @@
+[
+  {
+    "description": "5 horizontal parallel lines",
+    "ground_truth": "data/fixtures/synthetic/parallel_lines_gt.json",
+    "id": "parallel_lines",
+    "image": "data/fixtures/synthetic/parallel_lines.png",
+    "license": "MIT (self-generated)",
+    "source": "synthetic"
+  },
+  {
+    "description": "4 lines crossing at center",
+    "ground_truth": "data/fixtures/synthetic/intersecting_lines_gt.json",
+    "id": "intersecting_lines",
+    "image": "data/fixtures/synthetic/intersecting_lines.png",
+    "license": "MIT (self-generated)",
+    "source": "synthetic"
+  },
+  {
+    "description": "7\u00d76 grid of lines",
+    "ground_truth": "data/fixtures/synthetic/grid_gt.json",
+    "id": "grid",
+    "image": "data/fixtures/synthetic/grid.png",
+    "license": "MIT (self-generated)",
+    "source": "synthetic"
+  },
+  {
+    "description": "5 isolated circles",
+    "ground_truth": "data/fixtures/synthetic/circles_gt.json",
+    "id": "circles",
+    "image": "data/fixtures/synthetic/circles.png",
+    "license": "MIT (self-generated)",
+    "source": "synthetic"
+  },
+  {
+    "description": "4 quarter/half arcs",
+    "ground_truth": "data/fixtures/synthetic/arcs_gt.json",
+    "id": "arcs",
+    "image": "data/fixtures/synthetic/arcs.png",
+    "license": "MIT (self-generated)",
+    "source": "synthetic"
+  },
+  {
+    "description": "single rectangle contour",
+    "ground_truth": "data/fixtures/synthetic/rectangle_gt.json",
+    "id": "rectangle",
+    "image": "data/fixtures/synthetic/rectangle.png",
+    "license": "MIT (self-generated)",
+    "source": "synthetic"
+  },
+  {
+    "description": "mixed lines, circles and arcs",
+    "ground_truth": "data/fixtures/synthetic/composite_gt.json",
+    "id": "composite",
+    "image": "data/fixtures/synthetic/composite.png",
+    "license": "MIT (self-generated)",
+    "source": "synthetic"
+  },
+  {
+    "description": "composite with synthetic noise",
+    "ground_truth": "data/fixtures/synthetic/degraded_gt.json",
+    "id": "degraded",
+    "image": "data/fixtures/synthetic/degraded.png",
+    "license": "MIT (self-generated)",
+    "source": "synthetic"
+  }
+]
