@@ -4,7 +4,7 @@ import math
 from typing import Any
 
 from tdv.config import MetricsConfig
-from tdv.geometry.models import Circle, Line
+from tdv.geometry.models import Arc, Circle, Line, Polyline
 
 
 def _ensure_line(d: Any) -> Line:
@@ -19,18 +19,38 @@ def _ensure_circle(d: Any) -> Circle:
     return d
 
 
+def _ensure_arc(d: Any) -> Arc:
+    if isinstance(d, dict):
+        return Arc.from_dict(d)
+    return d
+
+
+def _ensure_polyline(d: Any) -> Polyline:
+    if isinstance(d, dict):
+        return Polyline.from_dict(d)
+    return d
+
+
 def evaluate(
-    detected_lines: list[Any],
-    detected_circles: list[Any],
-    gt_lines: list[Any],
-    gt_circles: list[Any],
+    detected_primitives: dict[str, list[Any]],
+    gt_primitives: dict[str, list[Any]],
     config: MetricsConfig,
 ) -> dict[str, Any]:
     result: dict[str, Any] = {}
-    dl = [_ensure_line(ln) for ln in detected_lines]
-    dc = [_ensure_circle(c) for c in detected_circles]
-    gl = [Line.from_dict(g) if isinstance(g, dict) else g for g in gt_lines]
-    gc = [Circle.from_dict(g) if isinstance(g, dict) else g for g in gt_circles]
+    dl = [_ensure_line(ln) for ln in detected_primitives.get("lines", [])]
+    dc = [_ensure_circle(c) for c in detected_primitives.get("circles", [])]
+    da = [_ensure_arc(a) for a in detected_primitives.get("arcs", [])]
+    dp = [_ensure_polyline(p) for p in detected_primitives.get("polylines", [])]
+    gl = [Line.from_dict(g) if isinstance(g, dict) else g for g in gt_primitives.get("lines", [])]
+    gc = [
+        Circle.from_dict(g) if isinstance(g, dict) else g
+        for g in gt_primitives.get("circles", [])
+    ]
+    ga = [Arc.from_dict(g) if isinstance(g, dict) else g for g in gt_primitives.get("arcs", [])]
+    gp = [
+        Polyline.from_dict(g) if isinstance(g, dict) else g
+        for g in gt_primitives.get("polylines", [])
+    ]
 
     if dl and gl:
         lp = _line_precision_recall(dl, gl, config)
@@ -38,6 +58,12 @@ def evaluate(
     if dc and gc:
         cp = _circle_precision_recall(dc, gc, config)
         result["circles"] = cp
+    if da and ga:
+        ap = _arc_precision_recall(da, ga, config)
+        result["arcs"] = ap
+    if dp and gp:
+        pp = _polyline_precision_recall(dp, gp, config)
+        result["polylines"] = pp
 
     return result
 
@@ -149,3 +175,90 @@ def _line_endpoint_dist(l1: Line, l2: Line) -> float:
     d1 = (dist(l1.x1, l1.y1, l2.x1, l2.y1) + dist(l1.x2, l1.y2, l2.x2, l2.y2)) / 2.0
     d2 = (dist(l1.x1, l1.y1, l2.x2, l2.y2) + dist(l1.x2, l1.y2, l2.x1, l2.y1)) / 2.0
     return min(d1, d2)
+
+
+def _arc_precision_recall(
+    detected: list[Arc],
+    gt: list[Arc],
+    config: MetricsConfig,
+) -> dict[str, float]:
+    matched_detected = set()
+    matched_gt = set()
+    center_errors: list[float] = []
+    radius_errors: list[float] = []
+
+    for i, d in enumerate(detected):
+        for j, g in enumerate(gt):
+            if j in matched_gt:
+                continue
+            cd = math.hypot(d.cx - g.cx, d.cy - g.cy)
+            rd = abs(d.r - g.r)
+            if cd < config.circle_center_tol and rd < config.circle_radius_tol:
+                matched_detected.add(i)
+                matched_gt.add(j)
+                center_errors.append(cd)
+                radius_errors.append(rd)
+                break
+
+    tp = len(matched_gt)
+    fp = len(detected) - len(matched_detected)
+    fn = len(gt) - len(matched_gt)
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+
+    return {
+        "precision": round(precision, 4),
+        "recall": round(recall, 4),
+        "f1": round(f1, 4),
+        "tp": tp,
+        "fp": fp,
+        "fn": fn,
+        "mean_center_error_px": round(sum(center_errors) / len(center_errors), 2)
+        if center_errors
+        else 0.0,
+        "mean_radius_error_px": round(sum(radius_errors) / len(radius_errors), 2)
+        if radius_errors
+        else 0.0,
+    }
+
+
+def _polyline_precision_recall(
+    detected: list[Polyline],
+    gt: list[Polyline],
+    config: MetricsConfig,
+) -> dict[str, float]:
+    matched_detected = set()
+    matched_gt = set()
+
+    for i, d in enumerate(detected):
+        for j, g in enumerate(gt):
+            if j in matched_gt:
+                continue
+            if _polyline_match(d, g, config.circle_center_tol):
+                matched_detected.add(i)
+                matched_gt.add(j)
+                break
+
+    tp = len(matched_gt)
+    fp = len(detected) - len(matched_detected)
+    fn = len(gt) - len(matched_gt)
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+
+    return {
+        "precision": round(precision, 4), "recall": round(recall, 4),
+        "f1": round(f1, 4), "tp": tp, "fp": fp, "fn": fn,
+    }
+
+
+def _polyline_match(d: Polyline, g: Polyline, tol: float) -> bool:
+    if len(d.points) != len(g.points):
+        return False
+    if not d.points or not g.points:
+        return False
+    for (dx, dy), (gx, gy) in zip(d.points, g.points, strict=False):
+        if math.hypot(dx - gx, dy - gy) > tol:
+            return False
+    return True

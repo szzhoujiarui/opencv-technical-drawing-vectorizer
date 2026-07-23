@@ -37,17 +37,19 @@ def test_line_endpoint_dist():
 
 
 def test_evaluate_no_gt():
-    result = evaluate([], [], [], [], PipelineConfig.default().metrics)
+    result = evaluate({}, {}, PipelineConfig.default().metrics)
     assert result == {}
 
 
 def test_evaluate_perfect_match():
-    result = evaluate(
-        [{"type": "line", "x1": 0, "y1": 0, "x2": 10, "y2": 0}],
-        [],
-        [{"type": "line", "x1": 0, "y1": 0, "x2": 10, "y2": 0}],
-        [],
-        PipelineConfig.default().metrics,
-    )
+    detected = {
+        "lines": [{"type": "line", "x1": 0, "y1": 0, "x2": 10, "y2": 0}],
+        "circles": [], "arcs": [], "polylines": [],
+    }
+    gt = {
+        "lines": [{"type": "line", "x1": 0, "y1": 0, "x2": 10, "y2": 0}],
+        "circles": [], "arcs": [], "polylines": [],
+    }
+    result = evaluate(detected, gt, PipelineConfig.default().metrics)
     if "lines" in result:
         assert result["lines"]["precision"] > 0

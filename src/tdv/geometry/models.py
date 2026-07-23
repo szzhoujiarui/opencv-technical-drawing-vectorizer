@@ -60,7 +60,11 @@ class Arc:
 
     @staticmethod
     def from_dict(d: dict[str, Any]) -> Arc:
-        return Arc(d["cx"], d["cy"], d["r"], d["start_angle"], d["end_angle"])
+        return Arc(
+            d["cx"], d["cy"], d["r"],
+            d.get("start_angle", d.get("start", 0.0)),
+            d.get("end_angle", d.get("end", 0.0)),
+        )
 
     def sort_key(self) -> tuple:
         return (self.cx, self.cy, self.r, self.start_angle, self.end_angle)

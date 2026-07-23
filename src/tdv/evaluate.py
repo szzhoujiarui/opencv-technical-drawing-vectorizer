@@ -61,16 +61,9 @@ def main() -> None:
             print(f"    FAILED: {e}")
             continue
 
-        detected_lines = result["primitives"].get("lines", [])
-        detected_circles = result["primitives"].get("circles", [])
-        gt_lines = gt.get("lines", [])
-        gt_circles = gt.get("circles", [])
-
         eval_result = evaluate(
-            detected_lines,
-            detected_circles,
-            gt_lines,
-            gt_circles,
+            result["primitives"],
+            gt,
             config.metrics,
         )
 

@@ -24,6 +24,18 @@ def correct_perspective(
     pts = approx.reshape(4, 2).astype(np.float32)
     rect = _order_points(pts)
     (tl, tr, br, bl) = rect
+
+    # Skip if opposite sides are nearly parallel (no perspective distortion)
+    # Perspective creates different side lengths for opposite edges
+    top = np.linalg.norm(tr - tl)
+    bottom = np.linalg.norm(br - bl)
+    left = np.linalg.norm(bl - tl)
+    right = np.linalg.norm(br - tr)
+    ratio_w = max(top, bottom) / max(min(top, bottom), 1.0)
+    ratio_h = max(left, right) / max(min(left, right), 1.0)
+    if ratio_w < 1.03 and ratio_h < 1.03:
+        return image, None
+
     w1 = np.linalg.norm(br - bl)
     w2 = np.linalg.norm(tr - tl)
     h1 = np.linalg.norm(tr - br)
