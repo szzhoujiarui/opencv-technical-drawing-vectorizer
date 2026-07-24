@@ -48,6 +48,10 @@ def vectorize(
 
     # Phase 2: Geometry extraction
     raw_lines = detect_lines(cleaned, config.geometry.lines)
+    max_lines = config.geometry.lines.max_count
+    if max_lines and len(raw_lines) > max_lines:
+        logger.warning("Too many lines (%d), truncating to %d", len(raw_lines), max_lines)
+        raw_lines = raw_lines[:max_lines]
     raw_circles = detect_circles(cleaned, config.geometry.circles)
     raw_arcs = detect_arcs(cleaned, config.geometry.arcs)
     raw_polylines = detect_contours(cleaned, config.geometry.contours)

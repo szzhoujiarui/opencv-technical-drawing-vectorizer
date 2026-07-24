@@ -36,6 +36,7 @@ geometry:
     threshold: 60
     min_line_length: 40
     max_line_gap: 15
+    max_count: 5000          # cap total detected lines to prevent O(n^2) blowup
   circles:
     enabled: true
     dp: 1.2

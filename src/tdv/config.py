@@ -51,6 +51,7 @@ class LinesConfig(BaseModel):
     threshold: int = 60
     min_line_length: float = 40.0
     max_line_gap: float = 15.0
+    max_count: int | None = 5000
 
 
 class CirclesConfig(BaseModel):

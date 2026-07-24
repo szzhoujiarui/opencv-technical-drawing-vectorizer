@@ -59,11 +59,19 @@ def main() -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     all_results: list[dict[str, Any]] = []
+    base = args.fixtures_dir.resolve()
 
     for fixture in fixtures:
         fixture_id = fixture["id"]
-        image_path = Path(fixture["image"])
-        gt_path = Path(fixture["ground_truth"])
+        image_path = (base / fixture["image"]).resolve()
+        gt_path = (base / fixture["ground_truth"]).resolve()
+
+        if not gt_path.is_relative_to(base):
+            logger.warning("    Path escapes fixtures dir: %s", gt_path)
+            continue
+        if not image_path.is_relative_to(base):
+            logger.warning("    Path escapes fixtures dir: %s", image_path)
+            continue
 
         logger.info("  Evaluating: %s", fixture_id)
 

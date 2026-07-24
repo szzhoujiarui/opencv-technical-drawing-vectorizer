@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from html import escape
 from pathlib import Path
 from typing import Any
 
@@ -32,9 +33,11 @@ def build_html_report(
     lines.append("<div class='grid'>")
 
     def _img_cell(label: str, rel_path: str | None) -> None:
-        lines.append(f"<div><h3>{label}</h3>")
+        safe_label = escape(label)
+        lines.append(f"<div><h3>{safe_label}</h3>")
         if rel_path and Path(rel_path).exists():
-            lines.append(f'<img src="{rel_path}" alt="{label}"/>')
+            safe_path = escape(str(rel_path), quote=True)
+            lines.append(f'<img src="{safe_path}" alt="{safe_label}"/>')
         else:
             lines.append("<p><em>Not available</em></p>")
         lines.append("</div>")
@@ -47,7 +50,7 @@ def build_html_report(
     lines.append("</div>")
     if metrics_md:
         lines.append("<div class='full'><h2>Metrics</h2>")
-        lines.append(f"<pre>{metrics_md}</pre></div>")
+        lines.append(f"<pre>{escape(metrics_md)}</pre></div>")
     lines.append("</body></html>")
     return "\n".join(lines)
 

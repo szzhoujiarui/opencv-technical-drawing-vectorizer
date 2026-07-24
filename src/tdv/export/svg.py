@@ -1,4 +1,5 @@
 from pathlib import Path
+from xml.sax.saxutils import escape as xml_escape
 
 from tdv.config import SvgExportConfig
 from tdv.geometry.models import Arc, Circle, Line, Polyline
@@ -22,13 +23,14 @@ def build_svg(
         f' width="{width}" height="{height}">'
     )
     parts.append(svg_open)
-    parts.append(f'  <rect width="100%" height="100%" fill="{config.background}"/>')
+    parts.append(f'  <rect width="100%" height="100%" fill="{xml_escape(config.background)}"/>')
 
     sw = config.stroke_width
 
     if lines:
         parts.append(
-            f'  <g id="lines" stroke="{config.layer_lines}" stroke-width="{sw}" fill="none">'
+            f'  <g id="lines" stroke="{xml_escape(config.layer_lines)}"'
+            f' stroke-width="{sw}" fill="none">'
         )
         for ln in lines:
             parts.append(
@@ -39,7 +41,8 @@ def build_svg(
 
     if circles:
         parts.append(
-            f'  <g id="circles" stroke="{config.layer_circles}" stroke-width="{sw}" fill="none">'
+            f'  <g id="circles" stroke="{xml_escape(config.layer_circles)}"'
+            f' stroke-width="{sw}" fill="none">'
         )
         for c in circles:
             parts.append(f'    <circle cx="{c.cx:{fmt}}" cy="{c.cy:{fmt}}" r="{c.r:{fmt}}"/>')
@@ -47,7 +50,8 @@ def build_svg(
 
     if arcs:
         parts.append(
-            f'  <g id="arcs" stroke="{config.layer_arcs}" stroke-width="{sw}" fill="none">'
+            f'  <g id="arcs" stroke="{xml_escape(config.layer_arcs)}"'
+            f' stroke-width="{sw}" fill="none">'
         )
         for a in arcs:
             parts.append(_svg_arc(a, fmt, config.layer_arcs, sw))
@@ -55,7 +59,7 @@ def build_svg(
 
     if polylines:
         poly_g = (
-            f'  <g id="polylines" stroke="{config.layer_polylines}"'
+            f'  <g id="polylines" stroke="{xml_escape(config.layer_polylines)}"'
             f' stroke-width="{sw}" fill="none">'
         )
         parts.append(poly_g)
@@ -84,7 +88,7 @@ def _svg_arc(a: Arc, fmt: str, color: str, sw: float) -> str:
     return (
         f'    <path d="M {x1:{fmt}} {y1:{fmt}} '
         f'A {a.r:{fmt}} {a.r:{fmt}} 0 {large} {sweep} {x2:{fmt}} {y2:{fmt}}" '
-        f'stroke="{color}" stroke-width="{sw}" fill="none"/>'
+        f'stroke="{xml_escape(color)}" stroke-width="{sw}" fill="none"/>'
     )
 
 
