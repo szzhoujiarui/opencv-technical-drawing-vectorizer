@@ -19,7 +19,7 @@ from tdv.io.save import save_json
 from tdv.normalize.filter import filter_arcs, filter_circles, filter_lines, filter_polylines
 from tdv.normalize.merge import merge_lines
 from tdv.normalize.snap import snap_lines
-from tdv.pipeline import PreprocessResult, run_preprocess
+from tdv.pipeline import PreprocessResult, run_preprocess, run_preprocess_on_array
 from tdv.report.overlay import draw_overlay, save_overlay
 from tdv.report.sidebyside import build_html_report
 
@@ -141,13 +141,6 @@ def _vectorize_image(
     config_path: str | Path | None = None,
     output_dir: str | Path | None = None,
 ) -> dict[str, Any]:
-    from tdv.preprocess.contrast import enhance_contrast
-    from tdv.preprocess.denoise import denoise
-    from tdv.preprocess.deskew import deskew
-    from tdv.preprocess.grayscale import to_grayscale
-    from tdv.preprocess.perspective import correct_perspective
-    from tdv.preprocess.threshold import apply_threshold
-
     config = _load_config(config_path)
     source_path = Path(source_path)
     stem = source_path.stem
@@ -155,41 +148,12 @@ def _vectorize_image(
     out.mkdir(parents=True, exist_ok=True)
 
     stages_dir = out / "stages"
-    current = image.copy()
-    stages: dict[str, Any] = {"input": current.copy()}
-
-    if config.preprocess.grayscale:
-        current = to_grayscale(current)
-        stages["grayscale"] = current.copy()
-
-    current = denoise(current, config.preprocess.denoise)
-    stages["denoise"] = current.copy()
-
-    current = enhance_contrast(current, config.preprocess.contrast)
-    stages["contrast"] = current.copy()
-
-    current = apply_threshold(current, config.preprocess.threshold)
-    stages["threshold"] = current.copy()
-
-    current, angle = deskew(current, config.preprocess.deskew)
-    stages["deskew"] = current.copy()
-
-    current, perspective_rect = correct_perspective(current, config.preprocess.perspective)
-    stages["perspective"] = current.copy()
-
-    if out is not None:
-        for name, stage_img in stages.items():
-            from tdv.io.save import save_intermediate
-            save_intermediate(stages_dir / f"stage_{name}.png", stage_img)
-
-    pre_result = PreprocessResult(
-        cleaned=current, stages=stages, perspective_rect=perspective_rect
-    )
+    pre_result = run_preprocess_on_array(image, config, out_dir=stages_dir)
     return vectorize(source_path, config_path, output_dir, preprocess_result=pre_result)
 
 
 def _dedup_circles_arcs(
-    circles: list[Any], arcs: list[Any], tol: float = 8.0
+    circles: list[Any], arcs: list[Any], tol: float
 ) -> list[Any]:
     if not arcs:
         return circles
@@ -218,6 +182,7 @@ def main() -> None:
     parser.add_argument("-c", "--config", type=Path, default=None, help="Config YAML path")
     parser.add_argument("-o", "--output", type=Path, default=None, help="Output directory")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging")
+    parser.add_argument("--version", action="version", version="%(prog)s 0.1.0")
     args = parser.parse_args()
 
     logging.basicConfig(

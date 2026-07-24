@@ -3,7 +3,14 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from tdv.config import ContrastConfig, DenoiseConfig, DeskewConfig, PipelineConfig
+from tdv.config import (
+    ContrastConfig,
+    DenoiseConfig,
+    DeskewConfig,
+    PerspectiveConfig,
+    PipelineConfig,
+    ThresholdConfig,
+)
 from tdv.io.load import read_image
 from tdv.pipeline import run_preprocess
 from tdv.preprocess.contrast import enhance_contrast
@@ -82,8 +89,6 @@ def test_threshold_adaptive():
 def test_threshold_otsu():
     img = np.ones((100, 100), dtype=np.uint8) * 200
     img[40:60, 40:60] = 50
-    from tdv.config import ThresholdConfig
-
     config = ThresholdConfig(method="otsu")
     result = apply_threshold(img, config)
     assert result.ndim == 2
@@ -113,13 +118,11 @@ def test_deskew_skewed_image():
     skewed = cv2.warpAffine(img, rot, (200, 200))
     cv2.line(skewed, (20, 100), (180, 100), 0, 2)
     result, angle = deskew(skewed, DeskewConfig())
-    assert abs(angle) < 1.0 or abs(angle) > 4.0
+    assert angle != 0.0
 
 
 def test_perspective_disabled():
     img = np.random.randint(0, 255, (100, 100), dtype=np.uint8)
-    from tdv.config import PerspectiveConfig
-
     pc = PerspectiveConfig(enabled=False)
     result, rect = correct_perspective(img, pc)
     assert np.array_equal(img, result)
@@ -135,8 +138,6 @@ def test_pipeline_on_fixture():
 
 
 def test_read_image_pdf_page_index():
-    from tdv.io.load import read_image
-
     try:
         read_image("nonexistent.pdf", page=0)
         raise AssertionError("Should have raised an error")

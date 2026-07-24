@@ -7,6 +7,7 @@ pdf_dpi: 200              # render DPI for PDF page inputs
 
 preprocess:
   grayscale: true
+  save_stages: true            # write intermediate stage PNGs to stages/ directory
   denoise:
     enabled: true
     method: "fastNlMeans"   # fastNlMeans | bilateral
@@ -75,7 +76,7 @@ export:
     layer_polylines: "#8250df"
     layer_contours: "#6e7781"
   dxf:
-    enabled: false           # DXF is an extension; stub only in MVP
+    enabled: false           # DXF export (requires ezdxf)
 
 metrics:
   line_angle_tol: 5.0

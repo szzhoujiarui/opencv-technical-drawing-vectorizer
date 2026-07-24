@@ -1,24 +1,18 @@
-from tdv.config import PipelineConfig
+import numpy as np
+
+from tdv.config import PipelineConfig, SvgExportConfig
 from tdv.geometry.models import Circle, Line
 from tdv.report.metrics import _line_angle_diff, _line_endpoint_dist, evaluate
 from tdv.report.overlay import draw_overlay
 
 
 def test_overlay_no_primitives():
-    import numpy as np
-
-    from tdv.config import SvgExportConfig
-
     img = np.ones((100, 100, 3), dtype=np.uint8) * 255
     result = draw_overlay(img, [], [], [], [], SvgExportConfig())
     assert result.shape == (100, 100, 3)
 
 
 def test_overlay_with_primitives():
-    import numpy as np
-
-    from tdv.config import SvgExportConfig
-
     img = np.ones((100, 100, 3), dtype=np.uint8) * 255
     result = draw_overlay(
         img, [Line(10, 10, 90, 90)], [Circle(50, 50, 20)], [], [], SvgExportConfig()

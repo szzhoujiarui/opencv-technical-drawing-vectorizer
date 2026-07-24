@@ -1,7 +1,7 @@
 from tdv.config import FilterConfig, MergeConfig, SnapConfig
 from tdv.geometry.models import Circle, Line
 from tdv.normalize.filter import filter_circles, filter_lines
-from tdv.normalize.merge import angle_between, endpoint_distance, merge_lines
+from tdv.normalize.merge import angle_between, merge_lines
 from tdv.normalize.snap import snap_lines
 
 
@@ -21,13 +21,6 @@ def test_angle_between_perpendicular():
     l2 = _line(5, 0, 5, 10)
     diff = angle_between(l1, l2)
     assert abs(diff - 1.5708) < 0.01
-
-
-def test_endpoint_distance():
-    l1 = _line(0, 0, 10, 0)
-    l2 = _line(8, 0, 20, 0)
-    d = endpoint_distance(l1, l2)
-    assert d < 3.0
 
 
 def test_merge_no_lines():

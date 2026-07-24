@@ -28,12 +28,16 @@ class PreprocessResult:
         self.perspective_rect = perspective_rect
 
 
-def run_preprocess(
-    path: str | Path, config: PipelineConfig, out_dir: str | Path | None = None
+def run_preprocess_on_array(
+    image: np.ndarray[Any, Any],
+    config: PipelineConfig,
+    out_dir: str | Path | None = None,
 ) -> PreprocessResult:
-    img = read_image(path, config.pdf_dpi)
-    stages: dict[str, np.ndarray[Any, Any]] = {"input": img.copy()}
-    current = img.copy()
+    if image.ndim not in (2, 3):
+        raise ValueError(f"Expected 2D or 3D image, got ndim={image.ndim}")
+
+    stages: dict[str, np.ndarray[Any, Any]] = {"input": image.copy()}
+    current = image.copy()
 
     if config.preprocess.grayscale:
         current = to_grayscale(current)
@@ -54,10 +58,17 @@ def run_preprocess(
     current, perspective_rect = correct_perspective(current, config.preprocess.perspective)
     stages["perspective"] = current.copy()
 
-    if out_dir is not None:
+    if config.preprocess.save_stages and out_dir is not None:
         out = Path(out_dir)
         out.mkdir(parents=True, exist_ok=True)
         for name, stage_img in stages.items():
             save_intermediate(out / f"stage_{name}.png", stage_img)
 
     return PreprocessResult(cleaned=current, stages=stages, perspective_rect=perspective_rect)
+
+
+def run_preprocess(
+    path: str | Path, config: PipelineConfig, out_dir: str | Path | None = None
+) -> PreprocessResult:
+    img = read_image(path, config.pdf_dpi)
+    return run_preprocess_on_array(img, config, out_dir)

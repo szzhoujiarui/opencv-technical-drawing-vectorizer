@@ -16,12 +16,14 @@ logger = logging.getLogger("tdv")
 
 
 def _macro_average_f1(results: list[dict[str, Any]]) -> float:
-    f1_scores: list[float] = []
+    per_fixture_f1: list[float] = []
     for r in results:
-        for _prim_type, metrics in r.get("metrics", {}).items():
-            if "f1" in metrics:
-                f1_scores.append(metrics["f1"])
-    return sum(f1_scores) / len(f1_scores) if f1_scores else 0.0
+        f1_scores = [
+            m["f1"] for m in r.get("metrics", {}).values() if "f1" in m
+        ]
+        if f1_scores:
+            per_fixture_f1.append(sum(f1_scores) / len(f1_scores))
+    return sum(per_fixture_f1) / len(per_fixture_f1) if per_fixture_f1 else 0.0
 
 
 def main() -> None:
@@ -34,6 +36,7 @@ def main() -> None:
     parser.add_argument("-c", "--config", type=Path, default=None, help="Config YAML path")
     parser.add_argument("-o", "--output", type=Path, default=None, help="Output directory")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging")
+    parser.add_argument("--version", action="version", version="%(prog)s 0.1.0")
     args = parser.parse_args()
 
     logging.basicConfig(

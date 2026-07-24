@@ -36,6 +36,7 @@ class PerspectiveConfig(BaseModel):
 
 class PreprocessConfig(BaseModel):
     grayscale: bool = True
+    save_stages: bool = True
     denoise: DenoiseConfig = DenoiseConfig()
     contrast: ContrastConfig = ContrastConfig()
     threshold: ThresholdConfig = ThresholdConfig()

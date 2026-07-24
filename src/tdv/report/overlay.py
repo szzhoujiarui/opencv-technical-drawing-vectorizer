@@ -20,7 +20,12 @@ def draw_overlay(
 
     def _hex_to_bgr(h: str) -> tuple[int, int, int]:
         h = h.lstrip("#")
-        r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+        if len(h) != 6:
+            raise ValueError(f"Invalid hex color '{h}': expected 6 hex digits")
+        try:
+            r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+        except ValueError:
+            raise ValueError(f"Invalid hex color '{h}': contains non-hex characters") from None
         return (b, g, r)
 
     def _draw_line(img: np.ndarray[Any, Any], line_obj: Line, color: tuple[int, int, int]) -> None:

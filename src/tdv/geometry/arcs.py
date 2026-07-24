@@ -107,7 +107,7 @@ def _fit_circle(pts: np.ndarray[Any, Any]) -> tuple[float, float, float, float] 
 
 
 def _already_detected(
-    cx: float, cy: float, r: float, result: list[Arc], tol: float = 8.0
+    cx: float, cy: float, r: float, result: list[Arc], tol: float
 ) -> bool:
     return any(
         abs(a.cx - cx) < tol and abs(a.cy - cy) < tol and abs(a.r - r) < tol

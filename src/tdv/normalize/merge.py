@@ -14,17 +14,6 @@ def angle_between(l1: Line, l2: Line) -> float:
     return min(diff, math.pi - diff)
 
 
-def endpoint_distance(l1: Line, l2: Line) -> float:
-    def _dist(x1: float, y1: float, x2: float, y2: float) -> float:
-        return math.hypot(x2 - x1, y2 - y1)
-
-    d11 = _dist(l1.x1, l1.y1, l2.x1, l2.y1)
-    d12 = _dist(l1.x1, l1.y1, l2.x2, l2.y2)
-    d21 = _dist(l1.x2, l1.y2, l2.x1, l2.y1)
-    d22 = _dist(l1.x2, l1.y2, l2.x2, l2.y2)
-    return min(d11, d12, d21, d22)
-
-
 def _perpendicular_distance(l1: Line, l2: Line) -> float:
     dx = l1.x2 - l1.x1
     dy = l1.y2 - l1.y1
@@ -61,10 +50,6 @@ def are_collinear(l1: Line, l2: Line, angle_tol: float, dist_tol: float) -> bool
     if _perpendicular_distance(l1, l2) >= dist_tol:
         return False
     return _overlaps_on_projection(l1, l2)
-
-
-def are_duplicate(l1: Line, l2: Line, angle_tol: float, dist_tol: float) -> bool:
-    return angle_between(l1, l2) < math.radians(angle_tol) and endpoint_distance(l1, l2) < dist_tol
 
 
 def _extended_endpoints(l1: Line, lines: list[Line]) -> tuple[float, float, float, float]:
