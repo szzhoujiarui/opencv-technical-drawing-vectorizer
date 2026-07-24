@@ -54,7 +54,7 @@ uv run tdv-vectorize input.png -c my_config.yaml -o results/
 - **预处理：** 灰度化、去噪（fastNlMeans/双边滤波）、CLAHE 对比度增强、自适应/OTSU 阈值、Hough/minAreaRect 旋转校正、基于轮廓的透视矫正
 - **几何检测：** 概率 Hough 直线检测、Hough 圆检测、基于轮廓的弧检测、多边形近似
 - **归一化：** 共线线段合并、端点吸附、基于长度的噪声过滤
-- **导出：** 带 `<g>` 分层的 SVG、JSON 图元
+- **导出：** 带 `<g>` 分层的 SVG、JSON 图元、DXF（通过 ezdxf）
 - **PDF 输入：** 通过 pypdfium2（无需系统 poppler）
 - **确定性：** 相同输入 + 配置 → 字节级一致的 JSON 和 SVG
 
@@ -63,7 +63,7 @@ uv run tdv-vectorize input.png -c my_config.yaml -o results/
 - Hough 参数需要针对每张图像调优以获得最佳检测效果；默认值在干净线条图纸上表现最好
 - 旋转校正/透视矫正可能会对干净的合成图像产生错位（专为真实扫描/拍摄图纸设计）
 - 弧检测为启发式方法（轮廓最小外接矩形拟合）；精度有波动
-- DXF 导出为占位实现——MVP 中未完成
+- DXF 导出仅支持基本图元（直线、圆、弧、多段线）——不支持块、属性或高级功能
 - 不包含深度学习、大模型或 OCR 集成（设计如此）
 - 像素 IoU 指标假设二值化清洗后的图像；噪声背景会影响精度
 

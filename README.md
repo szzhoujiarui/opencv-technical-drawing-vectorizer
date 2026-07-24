@@ -54,7 +54,7 @@ uv run tdv-vectorize input.png -c my_config.yaml -o results/
 - **Preprocessing:** grayscale, denoise (fastNlMeans/bilateral), CLAHE contrast, adaptive/OTSU threshold, Hough/minAreaRect deskew, contour-based perspective correction
 - **Geometry detection:** probabilistic Hough lines, Hough circles, contour-based arcs, polygon approximation
 - **Normalization:** collinear line merging, endpoint snapping, length-based noise filter
-- **Export:** SVG with `<g>` layers, JSON primitives
+- **Export:** SVG with `<g>` layers, JSON primitives, DXF via ezdxf
 - **PDF input:** via pypdfium2 (no system poppler)
 - **Deterministic:** same input + config → byte-identical JSON and SVG
 
@@ -63,7 +63,7 @@ uv run tdv-vectorize input.png -c my_config.yaml -o results/
 - Hough parameters require per-image tuning for optimal detection; defaults work best on clean line drawings
 - Deskew/perspective may misalign clean synthetic images (designed for real scanned/photographed drawings)
 - Arc detection is heuristic (contour min-area-rect fit); accuracy varies
-- DXF export is a stub — not implemented in MVP
+- DXF export is limited to basic entities (lines, circles, arcs, polylines) — no blocks, attributes, or advanced features
 - No deep learning, LLM, or OCR integration (by design)
 - Pixel IoU metric assumes binary-cleaned image; noisy backgrounds affect accuracy
 
