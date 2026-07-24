@@ -27,3 +27,7 @@ data/results/runs/
 # OS
 .DS_Store
 Thumbs.db
+
+# Secrets / tokens
+.env
+.env.*

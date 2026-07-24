@@ -19,3 +19,8 @@
 ## Determinism note
 The pipeline MUST produce byte-identical JSON+SVG for identical input+config.
 Do not introduce nondeterministic ordering, RNG without a fixed seed, or unsorted outputs.
+
+## Secrets / Push
+- Gitee token file: `C:\Users\74522\Downloads\gitee-api.env` (Windows host)
+- To push, configure credential helper or use SSH: https://gitee.com/help/articles/4291
+- `.env` / `.env.*` files are gitignored; do NOT commit tokens.
