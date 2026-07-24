@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import sys
 import time
 from pathlib import Path
@@ -19,6 +20,8 @@ from tdv.normalize.snap import snap_lines
 from tdv.pipeline import PreprocessResult, run_preprocess
 from tdv.report.overlay import draw_overlay, save_overlay
 from tdv.report.sidebyside import build_html_report
+
+logger = logging.getLogger("tdv")
 
 
 def vectorize(
@@ -148,7 +151,13 @@ def main() -> None:
     parser.add_argument("input", nargs="+", help="Input file(s) or directory")
     parser.add_argument("-c", "--config", type=Path, default=None, help="Config YAML path")
     parser.add_argument("-o", "--output", type=Path, default=None, help="Output directory")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging")
     args = parser.parse_args()
+
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        format="%(message)s",
+    )
 
     inputs: list[Path] = []
     for inp in args.input:
@@ -158,7 +167,7 @@ def main() -> None:
         elif p.exists() and p.is_file():
             inputs.append(p)
         else:
-            print(f"  Input not found: {p}")
+            logger.warning("Input not found: %s", p)
 
     _ = _load_config(args.config)
 
@@ -168,20 +177,20 @@ def main() -> None:
             continue
         stem = inp_path.stem
         run_out = Path(args.output) / stem if args.output else None
-        print(f"Processing: {inp_path}")
+        logger.info("Processing: %s", inp_path)
 
         t0 = time.time()
         try:
             result = vectorize(inp_path, str(args.config) if args.config else None, run_out)
             elapsed = time.time() - t0
-            print(f"  Done in {elapsed:.2f}s")
-            print(f"  SVG: {result['paths']['svg']}")
-            print(f"  JSON: {result['paths']['json']}")
-            print(f"  Report: {result['paths']['report']}")
+            logger.info("  Done in %.2fs", elapsed)
+            logger.debug("  SVG: %s", result["paths"]["svg"])
+            logger.debug("  JSON: %s", result["paths"]["json"])
+            logger.info("  Report: %s", result["paths"]["report"])
         except Exception as e:
-            print(f"  FAILED: {e}")
+            logger.error("  FAILED: %s", e)
             failures.append(str(inp_path))
 
     if failures:
-        print(f"\n{len(failures)} file(s) failed: {', '.join(failures)}")
+        logger.error("%d file(s) failed: %s", len(failures), ", ".join(failures))
         sys.exit(1)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import time
 from pathlib import Path
 from typing import Any
@@ -10,6 +11,8 @@ from tdv.cli import vectorize
 from tdv.config import PipelineConfig
 from tdv.io.save import save_json
 from tdv.report.metrics import evaluate
+
+logger = logging.getLogger("tdv")
 
 
 def _macro_average_f1(results: list[dict[str, Any]]) -> float:
@@ -30,11 +33,17 @@ def main() -> None:
     )
     parser.add_argument("-c", "--config", type=Path, default=None, help="Config YAML path")
     parser.add_argument("-o", "--output", type=Path, default=None, help="Output directory")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging")
     args = parser.parse_args()
+
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        format="%(message)s",
+    )
 
     manifest_path = args.fixtures_dir / "_manifest.json"
     if not manifest_path.exists():
-        print(f"No manifest found at {manifest_path}")
+        logger.error("No manifest found at %s", manifest_path)
         return
 
     with open(manifest_path) as f:
@@ -53,10 +62,10 @@ def main() -> None:
         image_path = Path(fixture["image"])
         gt_path = Path(fixture["ground_truth"])
 
-        print(f"  Evaluating: {fixture_id}")
+        logger.info("  Evaluating: %s", fixture_id)
 
         if not gt_path.exists():
-            print(f"    No ground truth at {gt_path}, skipping metrics")
+            logger.warning("    No ground truth at %s, skipping metrics", gt_path)
             continue
 
         with open(gt_path) as f:
@@ -67,7 +76,7 @@ def main() -> None:
             result = vectorize(image_path, args.config, out_dir / fixture_id)
             elapsed = time.time() - t0
         except Exception as e:
-            print(f"    FAILED: {e}")
+            logger.error("    FAILED: %s", e)
             continue
 
         eval_result = evaluate(
@@ -84,7 +93,7 @@ def main() -> None:
         }
         all_results.append(fixture_result)
 
-        print(f"    {elapsed:.2f}s | {eval_result}")
+        logger.info("    %.2fs | %s", elapsed, eval_result)
 
     report: dict[str, Any] = {
         "config": config.model_dump(mode="json"),
@@ -113,5 +122,5 @@ def main() -> None:
                     f.write(f"  - {k}: {v}\n")
             f.write("\n")
 
-    print(f"Report written to {report_path}")
-    print(f"Markdown report at {md_path}")
+    logger.info("Report written to %s", report_path)
+    logger.info("Markdown report at %s", md_path)
