@@ -1,5 +1,7 @@
 # Technical Drawing Vectorization with OpenCV and SVG Export
 
+**[中文版](README_zh.md)**
+
 An OpenCV portfolio project for technical drawing cleanup, geometry detection, and SVG vectorization.
 
 ## Pipeline
