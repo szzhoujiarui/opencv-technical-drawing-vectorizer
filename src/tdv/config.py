@@ -67,6 +67,12 @@ class ArcsConfig(BaseModel):
     min_arc_length: float = 20.0
     max_fit_error: float = 3.0
     min_arc_span: float = 30.0
+    dedup_tol: float = 8.0
+    hough_dp: float = 1.2
+    hough_min_dist: float = 60.0
+    hough_param1: float = 100.0
+    hough_param2: float = 35.0
+    hough_min_radius: int = 8
 
 
 class ContoursConfig(BaseModel):
@@ -119,6 +125,7 @@ class DxfExportConfig(BaseModel):
 
 
 class ExportConfig(BaseModel):
+    enabled: bool = True
     svg: SvgExportConfig = SvgExportConfig()
     dxf: DxfExportConfig = DxfExportConfig()
 

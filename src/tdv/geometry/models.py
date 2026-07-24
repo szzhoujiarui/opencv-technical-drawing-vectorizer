@@ -25,6 +25,8 @@ class Circle:
     def __init__(self, cx: float, cy: float, r: float) -> None:
         self.cx = cx
         self.cy = cy
+        if r < 0:
+            raise ValueError(f"Circle radius must be non-negative, got {r}")
         self.r = r
 
     def to_dict(self) -> dict[str, Any]:
@@ -72,6 +74,8 @@ class Arc:
 
 class Polyline:
     def __init__(self, points: list[tuple[float, float]], closed: bool = False) -> None:
+        if not points:
+            raise ValueError("Polyline must have at least one point")
         self.points = points
         self.closed = closed
 

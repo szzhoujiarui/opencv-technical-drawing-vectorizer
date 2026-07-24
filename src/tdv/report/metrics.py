@@ -52,18 +52,10 @@ def evaluate(
         for g in gt_primitives.get("polylines", [])
     ]
 
-    if dl and gl:
-        lp = _line_precision_recall(dl, gl, config)
-        result["lines"] = lp
-    if dc and gc:
-        cp = _circle_precision_recall(dc, gc, config)
-        result["circles"] = cp
-    if da and ga:
-        ap = _arc_precision_recall(da, ga, config)
-        result["arcs"] = ap
-    if dp and gp:
-        pp = _polyline_precision_recall(dp, gp, config)
-        result["polylines"] = pp
+    result["lines"] = _line_precision_recall(dl, gl, config)
+    result["circles"] = _circle_precision_recall(dc, gc, config)
+    result["arcs"] = _arc_precision_recall(da, ga, config)
+    result["polylines"] = _polyline_precision_recall(dp, gp, config)
 
     return result
 
@@ -73,6 +65,13 @@ def _line_precision_recall(
     gt: list[Line],
     config: MetricsConfig,
 ) -> dict[str, float]:
+    if not detected and not gt:
+        return {
+            "precision": 0.0, "recall": 0.0, "f1": 0.0,
+            "tp": 0, "fp": 0, "fn": 0,
+            "mean_angle_error_deg": 0.0, "mean_endpoint_dist_px": 0.0,
+        }
+
     matched_detected = set()
     matched_gt = set()
     angle_errors: list[float] = []
@@ -119,6 +118,13 @@ def _circle_precision_recall(
     gt: list[Circle],
     config: MetricsConfig,
 ) -> dict[str, float]:
+    if not detected and not gt:
+        return {
+            "precision": 0.0, "recall": 0.0, "f1": 0.0,
+            "tp": 0, "fp": 0, "fn": 0,
+            "mean_center_error_px": 0.0, "mean_radius_error_px": 0.0,
+        }
+
     matched_detected = set()
     matched_gt = set()
     center_errors: list[float] = []
@@ -166,6 +172,9 @@ def _line_angle_diff(l1: Line, l2: Line) -> float:
 
     diff = abs(_angle(l1) - _angle(l2)) % 180
     return min(diff, 180 - diff)
+    # Note: for anti-parallel lines (180° apart), % 180 yields 0, reporting
+    # perfect alignment. This is intentional — HoughLinesP rarely outputs
+    # anti-parallel segments, and the metric measures collinearity, not orientation.
 
 
 def _line_endpoint_dist(l1: Line, l2: Line) -> float:
@@ -182,6 +191,13 @@ def _arc_precision_recall(
     gt: list[Arc],
     config: MetricsConfig,
 ) -> dict[str, float]:
+    if not detected and not gt:
+        return {
+            "precision": 0.0, "recall": 0.0, "f1": 0.0,
+            "tp": 0, "fp": 0, "fn": 0,
+            "mean_center_error_px": 0.0, "mean_radius_error_px": 0.0,
+        }
+
     matched_detected = set()
     matched_gt = set()
     center_errors: list[float] = []
@@ -228,6 +244,12 @@ def _polyline_precision_recall(
     gt: list[Polyline],
     config: MetricsConfig,
 ) -> dict[str, float]:
+    if not detected and not gt:
+        return {
+            "precision": 0.0, "recall": 0.0, "f1": 0.0,
+            "tp": 0, "fp": 0, "fn": 0,
+        }
+
     matched_detected = set()
     matched_gt = set()
 

@@ -43,7 +43,8 @@ def _circumference_coverage(
         xs = np.round(cx + rr * np.cos(thetas)).astype(int)
         ys = np.round(cy + rr * np.sin(thetas)).astype(int)
         valid = (xs >= 0) & (xs < w) & (ys >= 0) & (ys < h)
-        for i in range(n):
-            if valid[i] and not on_circle[i]:
-                on_circle[i] = image[ys[i], xs[i]] > 0
+        xs_clamped = np.clip(xs, 0, w - 1)
+        ys_clamped = np.clip(ys, 0, h - 1)
+        edge_pixels = np.where(valid, image[ys_clamped, xs_clamped], 0) > 0
+        on_circle |= edge_pixels
     return float(on_circle.sum()) / n

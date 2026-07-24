@@ -41,9 +41,50 @@ def test_merge_distant():
     assert len(result) == 2
 
 
-def test_filter_lines():
-    from tdv.config import FilterConfig
+def test_merge_same_angle_perpendicular_offset():
+    """Two parallel lines with perpendicular offset > dist_tol must not merge."""
+    l1 = _line(0, 0, 100, 0)
+    l2 = _line(0, 5, 100, 5)
+    cfg = MergeConfig(collinear_dist_tol=4.0)
+    result = merge_lines([l1, l2], cfg)
+    assert len(result) == 2
 
+
+def test_merge_three_collinear_segments():
+    """Three collinear segments should merge into one via transitive closure."""
+    l1 = _line(0, 0, 50, 0)
+    l2 = _line(50, 0, 100, 0)
+    l3 = _line(100, 0, 150, 0)
+    result = merge_lines([l1, l2, l3], MergeConfig())
+    assert len(result) == 1
+    merged = result[0]
+    assert merged.x1 == 0 and merged.y1 == 0
+    assert merged.x2 == 150 and merged.y2 == 0
+
+
+def test_merge_vertical_lines():
+    """Vertical collinear segments should merge correctly."""
+    l1 = _line(10, 0, 10, 50)
+    l2 = _line(10, 50, 10, 100)
+    result = merge_lines([l1, l2], MergeConfig())
+    assert len(result) == 1
+    merged = result[0]
+    assert merged.x1 == 10 and merged.y1 == 0
+    assert merged.x2 == 10 and merged.y2 == 100
+
+
+def test_merge_overlapping():
+    """Overlapping collinear segments should merge into the full span."""
+    l1 = _line(0, 0, 100, 0)
+    l2 = _line(30, 0, 130, 0)
+    result = merge_lines([l1, l2], MergeConfig())
+    assert len(result) == 1
+    merged = result[0]
+    assert merged.x1 == 0 and merged.y1 == 0
+    assert merged.x2 == 130 and merged.y2 == 0
+
+
+def test_filter_lines():
     lines = [_line(0, 0, 100, 0), _line(0, 0, 5, 0)]
     result = filter_lines(lines, FilterConfig(min_length=10))
     assert len(result) == 1

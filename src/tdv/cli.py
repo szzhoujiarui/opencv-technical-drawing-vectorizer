@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -15,7 +16,7 @@ from tdv.io.save import save_json
 from tdv.normalize.filter import filter_arcs, filter_circles, filter_lines, filter_polylines
 from tdv.normalize.merge import merge_lines
 from tdv.normalize.snap import snap_lines
-from tdv.pipeline import run_preprocess
+from tdv.pipeline import PreprocessResult, run_preprocess
 from tdv.report.overlay import draw_overlay, save_overlay
 from tdv.report.sidebyside import build_html_report
 
@@ -24,6 +25,7 @@ def vectorize(
     input_path: str | Path,
     config_path: str | Path | None = None,
     output_dir: str | Path | None = None,
+    preprocess_result: PreprocessResult | None = None,
 ) -> dict[str, Any]:
     config = _load_config(config_path)
     input_path = Path(input_path)
@@ -31,9 +33,12 @@ def vectorize(
     out = Path(output_dir) if output_dir else Path(f"data/results/runs/{stem}")
     out.mkdir(parents=True, exist_ok=True)
 
-    # Phase 1: Preprocessing
+    # Phase 1: Preprocessing (skip if preprocessed result provided)
     stages_dir = out / "stages"
-    pre_result = run_preprocess(input_path, config, out_dir=stages_dir)
+    if preprocess_result is not None:
+        pre_result = preprocess_result
+    else:
+        pre_result = run_preprocess(input_path, config, out_dir=stages_dir)
     cleaned = pre_result.cleaned
 
     # Phase 2: Geometry extraction
@@ -49,7 +54,9 @@ def vectorize(
     final_circles = filter_circles(raw_circles, config.normalize.filter)
     final_arcs = filter_arcs(raw_arcs, config.normalize.filter)
     final_polylines = filter_polylines(raw_polylines, config.normalize.filter)
-    final_circles = _dedup_circles_arcs(final_circles, final_arcs)
+    final_circles = _dedup_circles_arcs(
+        final_circles, final_arcs, config.metrics.circle_center_tol
+    )
 
     primitives = {
         "lines": [ln.to_dict() for ln in final_lines],
@@ -61,38 +68,41 @@ def vectorize(
     json_path = out / f"{stem}_primitives.json"
     save_json(json_path, primitives, config.precision)
 
-    # Phase 3: Export SVG
-    h, w = cleaned.shape[:2]
-    svg_content = build_svg(
-        w,
-        h,
-        final_lines,
-        final_circles,
-        final_arcs,
-        final_polylines,
-        config.export.svg,
-        config.precision,
-    )
-    svg_path = out / f"{stem}.svg"
-    save_svg(svg_path, svg_content)
-
-    # Overlay
-    overlay = draw_overlay(
-        cleaned,
-        final_lines,
-        final_circles,
-        final_arcs,
-        final_polylines,
-        config.export.svg,
-    )
+    svg_content = ""
     overlay_path = out / f"{stem}_overlay.png"
-    save_overlay(overlay_path, overlay)
-
-    # Side-by-side HTML report
-    cleaned_path = stages_dir / "stage_perspective.png"
-    report_html = build_html_report(input_path, overlay_path, cleaned_path, svg_path)
     report_path = out / f"{stem}_report.html"
-    Path(report_path).write_text(report_html)
+
+    if config.export.enabled:
+        # Phase 3: Export SVG
+        h, w = cleaned.shape[:2]
+        svg_content = build_svg(
+            w,
+            h,
+            final_lines,
+            final_circles,
+            final_arcs,
+            final_polylines,
+            config.export.svg,
+            config.precision,
+        )
+        svg_path = out / f"{stem}.svg"
+        save_svg(svg_path, svg_content)
+
+        # Overlay
+        overlay = draw_overlay(
+            cleaned,
+            final_lines,
+            final_circles,
+            final_arcs,
+            final_polylines,
+            config.export.svg,
+        )
+        save_overlay(overlay_path, overlay)
+
+        # Side-by-side HTML report
+        cleaned_path = stages_dir / "stage_perspective.png"
+        report_html = build_html_report(input_path, overlay_path, cleaned_path, svg_path)
+        Path(report_path).write_text(report_html)
 
     result = {
         "input": str(input_path),
@@ -101,7 +111,7 @@ def vectorize(
         "svg": svg_content,
         "paths": {
             "json": str(json_path),
-            "svg": str(svg_path),
+            "svg": str(out / f"{stem}.svg"),
             "overlay": str(overlay_path),
             "report": str(report_path),
         },
@@ -144,12 +154,15 @@ def main() -> None:
     for inp in args.input:
         p = Path(inp)
         if p.is_dir():
-            inputs.extend(sorted(p.glob("*")))
-        else:
+            inputs.extend(sorted(f for f in p.glob("*") if f.is_file()))
+        elif p.exists() and p.is_file():
             inputs.append(p)
+        else:
+            print(f"  Input not found: {p}")
 
     _ = _load_config(args.config)
 
+    failures: list[str] = []
     for inp_path in inputs:
         if inp_path.suffix.lower() not in {".png", ".jpg", ".jpeg", ".tiff", ".tif", ".pdf"}:
             continue
@@ -167,3 +180,8 @@ def main() -> None:
             print(f"  Report: {result['paths']['report']}")
         except Exception as e:
             print(f"  FAILED: {e}")
+            failures.append(str(inp_path))
+
+    if failures:
+        print(f"\n{len(failures)} file(s) failed: {', '.join(failures)}")
+        sys.exit(1)

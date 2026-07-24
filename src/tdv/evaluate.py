@@ -12,6 +12,15 @@ from tdv.io.save import save_json
 from tdv.report.metrics import evaluate
 
 
+def _macro_average_f1(results: list[dict[str, Any]]) -> float:
+    f1_scores: list[float] = []
+    for r in results:
+        for _prim_type, metrics in r.get("metrics", {}).items():
+            if "f1" in metrics:
+                f1_scores.append(metrics["f1"])
+    return sum(f1_scores) / len(f1_scores) if f1_scores else 0.0
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate vectorizer against fixtures")
     parser.add_argument(
@@ -77,10 +86,14 @@ def main() -> None:
 
         print(f"    {elapsed:.2f}s | {eval_result}")
 
-    report = {
+    report: dict[str, Any] = {
         "config": config.model_dump(mode="json"),
         "fixtures": all_results,
     }
+
+    if all_results:
+        macro_f1 = _macro_average_f1(all_results)
+        report["macro_avg_f1"] = macro_f1
 
     report_path = out_dir / "eval_report.json"
     save_json(report_path, report, config.precision)
@@ -88,6 +101,9 @@ def main() -> None:
     md_path = out_dir / "eval_report.md"
     with open(md_path, "w") as f:
         f.write("# Evaluation Report\n\n")
+        if all_results:
+            macro_f1 = _macro_average_f1(all_results)
+            f.write(f"## Macro Average F1: {macro_f1:.4f}\n\n")
         for fr in all_results:
             f.write(f"## {fr['id']}: {fr.get('description', '')}\n")
             f.write(f"- Time: {fr['elapsed_s']:.2f}s\n")

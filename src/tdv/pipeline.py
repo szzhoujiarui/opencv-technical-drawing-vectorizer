@@ -14,9 +14,15 @@ from tdv.preprocess.threshold import apply_threshold
 
 
 class PreprocessResult:
-    def __init__(self, cleaned: np.ndarray, stages: dict[str, np.ndarray]) -> None:
+    def __init__(
+        self,
+        cleaned: np.ndarray,
+        stages: dict[str, np.ndarray],
+        perspective_rect: np.ndarray | None = None,
+    ) -> None:
         self.cleaned = cleaned
         self.stages = stages
+        self.perspective_rect = perspective_rect
 
 
 def run_preprocess(
@@ -42,7 +48,7 @@ def run_preprocess(
     current, angle = deskew(current, config.preprocess.deskew)
     stages["deskew"] = current.copy()
 
-    current, _ = correct_perspective(current, config.preprocess.perspective)
+    current, perspective_rect = correct_perspective(current, config.preprocess.perspective)
     stages["perspective"] = current.copy()
 
     if out_dir is not None:
@@ -51,4 +57,4 @@ def run_preprocess(
         for name, stage_img in stages.items():
             save_intermediate(out / f"stage_{name}.png", stage_img)
 
-    return PreprocessResult(cleaned=current, stages=stages)
+    return PreprocessResult(cleaned=current, stages=stages, perspective_rect=perspective_rect)

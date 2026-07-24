@@ -53,11 +53,11 @@ def _detect_from_hough(
     circles = cv2.HoughCircles(
         image,
         cv2.HOUGH_GRADIENT,
-        dp=1.2,
-        minDist=60,
-        param1=100,
-        param2=35,
-        minRadius=8,
+        dp=config.hough_dp,
+        minDist=config.hough_min_dist,
+        param1=config.hough_param1,
+        param2=config.hough_param2,
+        minRadius=config.hough_min_radius,
         maxRadius=max(image.shape[:2]) // 2,
     )
     if circles is None:
@@ -68,7 +68,7 @@ def _detect_from_hough(
 
     for row in circles[0]:
         cx, cy, r = float(row[0]), float(row[1]), float(row[2])
-        if _already_detected(cx, cy, r, result):
+        if _already_detected(cx, cy, r, result, config.dedup_tol):
             continue
         cov_result = _angular_coverage(image, cx, cy, r)
         if cov_result is None:
