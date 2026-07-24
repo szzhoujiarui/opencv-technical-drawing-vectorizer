@@ -65,6 +65,8 @@ class CirclesConfig(BaseModel):
 class ArcsConfig(BaseModel):
     enabled: bool = True
     min_arc_length: float = 20.0
+    max_fit_error: float = 3.0
+    min_arc_span: float = 30.0
 
 
 class ContoursConfig(BaseModel):
