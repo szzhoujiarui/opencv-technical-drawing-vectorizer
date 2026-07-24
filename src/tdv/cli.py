@@ -14,6 +14,7 @@ from tdv.geometry.arcs import detect_arcs
 from tdv.geometry.circles import detect_circles
 from tdv.geometry.contours import detect_contours
 from tdv.geometry.lines import detect_lines
+from tdv.io.load import read_pdf_pages
 from tdv.io.save import save_json
 from tdv.normalize.filter import filter_arcs, filter_circles, filter_lines, filter_polylines
 from tdv.normalize.merge import merge_lines
@@ -133,6 +134,60 @@ def vectorize(
     return result
 
 
+def _vectorize_image(
+    image: Any,
+    source_path: str | Path,
+    page_index: int,
+    config_path: str | Path | None = None,
+    output_dir: str | Path | None = None,
+) -> dict[str, Any]:
+    from tdv.preprocess.contrast import enhance_contrast
+    from tdv.preprocess.denoise import denoise
+    from tdv.preprocess.deskew import deskew
+    from tdv.preprocess.grayscale import to_grayscale
+    from tdv.preprocess.perspective import correct_perspective
+    from tdv.preprocess.threshold import apply_threshold
+
+    config = _load_config(config_path)
+    source_path = Path(source_path)
+    stem = source_path.stem
+    out = Path(output_dir) if output_dir else Path(f"data/results/runs/{stem}/page_{page_index}")
+    out.mkdir(parents=True, exist_ok=True)
+
+    stages_dir = out / "stages"
+    current = image.copy()
+    stages: dict[str, Any] = {"input": current.copy()}
+
+    if config.preprocess.grayscale:
+        current = to_grayscale(current)
+        stages["grayscale"] = current.copy()
+
+    current = denoise(current, config.preprocess.denoise)
+    stages["denoise"] = current.copy()
+
+    current = enhance_contrast(current, config.preprocess.contrast)
+    stages["contrast"] = current.copy()
+
+    current = apply_threshold(current, config.preprocess.threshold)
+    stages["threshold"] = current.copy()
+
+    current, angle = deskew(current, config.preprocess.deskew)
+    stages["deskew"] = current.copy()
+
+    current, perspective_rect = correct_perspective(current, config.preprocess.perspective)
+    stages["perspective"] = current.copy()
+
+    if out is not None:
+        for name, stage_img in stages.items():
+            from tdv.io.save import save_intermediate
+            save_intermediate(stages_dir / f"stage_{name}.png", stage_img)
+
+    pre_result = PreprocessResult(
+        cleaned=current, stages=stages, perspective_rect=perspective_rect
+    )
+    return vectorize(source_path, config_path, output_dir, preprocess_result=pre_result)
+
+
 def _dedup_circles_arcs(
     circles: list[Any], arcs: list[Any], tol: float = 8.0
 ) -> list[Any]:
@@ -180,27 +235,54 @@ def main() -> None:
         else:
             logger.warning("Input not found: %s", p)
 
-    _ = _load_config(args.config)
+    config = _load_config(args.config)
 
     failures: list[str] = []
     for inp_path in inputs:
         if inp_path.suffix.lower() not in {".png", ".jpg", ".jpeg", ".tiff", ".tif", ".pdf"}:
             continue
         stem = inp_path.stem
-        run_out = Path(args.output) / stem if args.output else None
-        logger.info("Processing: %s", inp_path)
+        is_pdf = inp_path.suffix.lower() == ".pdf"
 
-        t0 = time.time()
-        try:
-            result = vectorize(inp_path, str(args.config) if args.config else None, run_out)
-            elapsed = time.time() - t0
-            logger.info("  Done in %.2fs", elapsed)
-            logger.debug("  SVG: %s", result["paths"]["svg"])
-            logger.debug("  JSON: %s", result["paths"]["json"])
-            logger.info("  Report: %s", result["paths"]["report"])
-        except Exception as e:
-            logger.error("  FAILED: %s", e)
-            failures.append(str(inp_path))
+        if is_pdf:
+            try:
+                pages = read_pdf_pages(inp_path, config.pdf_dpi)
+            except Exception as e:
+                logger.error("  FAILED to read PDF: %s", e)
+                failures.append(str(inp_path))
+                continue
+
+            logger.info("Processing: %s (%d pages)", inp_path, len(pages))
+            for page_idx, page_img in pages:
+                page_out = (Path(args.output) / stem / f"page_{page_idx}") if args.output else None
+                logger.info("  Page %d", page_idx)
+                t0 = time.time()
+                try:
+                    result = _vectorize_image(
+                        page_img, inp_path, page_idx,
+                        str(args.config) if args.config else None, page_out,
+                    )
+                    elapsed = time.time() - t0
+                    logger.info("    Done in %.2fs", elapsed)
+                    logger.info("    Report: %s", result["paths"]["report"])
+                except Exception as e:
+                    logger.error("    FAILED: %s", e)
+                    failures.append(f"{inp_path} page {page_idx}")
+        else:
+            run_out = Path(args.output) / stem if args.output else None
+            logger.info("Processing: %s", inp_path)
+
+            t0 = time.time()
+            try:
+                result = vectorize(inp_path, str(args.config) if args.config else None, run_out)
+                elapsed = time.time() - t0
+                logger.info("  Done in %.2fs", elapsed)
+                logger.debug("  SVG: %s", result["paths"]["svg"])
+                logger.debug("  JSON: %s", result["paths"]["json"])
+                logger.info("  Report: %s", result["paths"]["report"])
+            except Exception as e:
+                logger.error("  FAILED: %s", e)
+                failures.append(str(inp_path))
 
     if failures:
         logger.error("%d file(s) failed: %s", len(failures), ", ".join(failures))

@@ -132,3 +132,13 @@ def test_pipeline_on_fixture():
     assert result.cleaned is not None
     assert "grayscale" in result.stages
     assert "threshold" in result.stages
+
+
+def test_read_image_pdf_page_index():
+    from tdv.io.load import read_image
+
+    try:
+        read_image("nonexistent.pdf", page=0)
+        raise AssertionError("Should have raised an error")
+    except (ValueError, FileNotFoundError):
+        pass
