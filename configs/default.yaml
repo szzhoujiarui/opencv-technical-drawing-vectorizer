@@ -56,13 +56,14 @@ geometry:
 normalize:
   merge:
     collinear_angle_tol: 3.0     # degrees
-    collinear_dist_tol: 4.0      # px
+    collinear_dist_tol: 8.0      # px
     duplicate_angle_tol: 3.0
-    duplicate_dist_tol: 4.0
+    duplicate_dist_tol: 8.0
   snap:
     endpoint_tol: 6.0        # px; endpoints within this distance snap together
   filter:
-    min_length: 15           # drop primitives shorter than this
+    min_length: 71            # drop line segments shorter than this
+    min_circle_radius: 20     # drop circles/arcs smaller than this
 
 export:
   svg:

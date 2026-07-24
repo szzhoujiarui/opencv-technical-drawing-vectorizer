@@ -7,14 +7,16 @@ from tdv.geometry.models import Line
 def snap_lines(lines: list[Line], config: SnapConfig) -> list[Line]:
     tol = config.endpoint_tol
     for _ in range(10):
-        pass  # _changed = False
+        changed = False
         for i in range(len(lines)):
             for j in range(i + 1, len(lines)):
                 l1, l2 = lines[i], lines[j]
                 min_dist, swap1, swap2 = _closest_endpoints(l1, l2)
                 if min_dist < tol:
                     _snap_endpoints(lines, i, j, swap1, swap2)
-                    pass  # changed = True
+                    changed = True
+        if not changed:
+            break
     return lines
 
 

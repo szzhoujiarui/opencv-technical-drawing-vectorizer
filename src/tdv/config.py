@@ -84,9 +84,9 @@ class GeometryConfig(BaseModel):
 
 class MergeConfig(BaseModel):
     collinear_angle_tol: float = 3.0
-    collinear_dist_tol: float = 4.0
+    collinear_dist_tol: float = 8.0
     duplicate_angle_tol: float = 3.0
-    duplicate_dist_tol: float = 4.0
+    duplicate_dist_tol: float = 8.0
 
 
 class SnapConfig(BaseModel):
@@ -94,7 +94,8 @@ class SnapConfig(BaseModel):
 
 
 class FilterConfig(BaseModel):
-    min_length: float = 15.0
+    min_length: float = 71.0
+    min_circle_radius: float = 20.0
 
 
 class NormalizeConfig(BaseModel):

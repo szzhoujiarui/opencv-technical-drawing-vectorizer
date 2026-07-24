@@ -11,12 +11,11 @@ def filter_lines(lines: list[Line], config: FilterConfig) -> list[Line]:
 
 
 def filter_circles(circles: list[Circle], config: FilterConfig) -> list[Circle]:
-    min_r = config.min_length / 2.0
-    return [c for c in circles if c.r >= min_r]
+    return [c for c in circles if c.r >= config.min_circle_radius]
 
 
 def filter_arcs(arcs: list[Arc], config: FilterConfig) -> list[Arc]:
-    return [a for a in arcs if a.r >= config.min_length / 2.0]
+    return [a for a in arcs if a.r >= config.min_circle_radius]
 
 
 def filter_polylines(polylines: list[Polyline], config: FilterConfig) -> list[Polyline]:
