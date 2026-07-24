@@ -49,6 +49,7 @@ def vectorize(
     final_circles = filter_circles(raw_circles, config.normalize.filter)
     final_arcs = filter_arcs(raw_arcs, config.normalize.filter)
     final_polylines = filter_polylines(raw_polylines, config.normalize.filter)
+    final_circles = _dedup_circles_arcs(final_circles, final_arcs)
 
     primitives = {
         "lines": [ln.to_dict() for ln in final_lines],
@@ -106,6 +107,21 @@ def vectorize(
         },
     }
     return result
+
+
+def _dedup_circles_arcs(
+    circles: list[Any], arcs: list[Any], tol: float = 8.0
+) -> list[Any]:
+    if not arcs:
+        return circles
+    return [
+        c
+        for c in circles
+        if not any(
+            abs(c.cx - a.cx) < tol and abs(c.cy - a.cy) < tol and abs(c.r - a.r) < tol
+            for a in arcs
+        )
+    ]
 
 
 def _load_config(path: str | Path | None) -> PipelineConfig:
