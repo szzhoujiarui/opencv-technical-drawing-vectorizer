@@ -258,7 +258,28 @@ def _polyline_match(d: Polyline, g: Polyline, tol: float) -> bool:
         return False
     if not d.points or not g.points:
         return False
-    for (dx, dy), (gx, gy) in zip(d.points, g.points, strict=False):
-        if math.hypot(dx - gx, dy - gy) > tol:
-            return False
-    return True
+    n = len(d.points)
+    if d.closed:
+        det = list(d.points)
+        for _ in range(2):
+            for offset in range(n):
+                rotated = det[offset:] + det[:offset]
+                if _points_match(rotated, g.points, tol):
+                    return True
+            det = det[::-1]
+    else:
+        if _points_match(d.points, g.points, tol):
+            return True
+        if _points_match(d.points[::-1], g.points, tol):
+            return True
+    return False
+
+
+def _points_match(
+    p1: list[tuple[float, float]],
+    p2: list[tuple[float, float]],
+    tol: float,
+) -> bool:
+    return all(
+        math.hypot(x1 - x2, y1 - y2) <= tol for (x1, y1), (x2, y2) in zip(p1, p2, strict=False)
+    )
