@@ -1,4 +1,4 @@
-from tdv.config import SvgExportConfig
+from tdv.config import DxfExportConfig, SvgExportConfig
 from tdv.export.dxf import build_dxf, save_dxf
 from tdv.export.svg import build_svg
 
@@ -57,17 +57,60 @@ def test_svg_precision_0():
     assert 'x1="10"' in svg
 
 
-def test_dxf_stub():
+def test_dxf_with_lines():
     from tdv.geometry.models import Line
 
-    try:
-        build_dxf([Line(0, 0, 10, 10)], [], [], [])
-        msg = "Should have raised NotImplementedError"
-        raise AssertionError(msg)
-    except NotImplementedError:
-        pass
+    config = DxfExportConfig()
+    lines = [Line(0, 0, 100, 0), Line(0, 50, 100, 50)]
+    doc = build_dxf(lines, [], [], [], config)
+    msp = doc.modelspace()
+    entities = list(msp)
+    assert len(entities) == 2
+    assert entities[0].dxftype() == "LINE"
 
 
-def test_dxf_save_stub(tmp_path):
-    save_dxf(tmp_path / "test.dxf", "dummy")
+def test_dxf_with_circles():
+    from tdv.geometry.models import Circle
+
+    config = DxfExportConfig()
+    circles = [Circle(50, 50, 30)]
+    doc = build_dxf([], circles, [], [], config)
+    msp = doc.modelspace()
+    entities = list(msp)
+    assert len(entities) == 1
+    assert entities[0].dxftype() == "CIRCLE"
+
+
+def test_dxf_with_arc():
+    from tdv.geometry.models import Arc
+
+    config = DxfExportConfig()
+    arcs = [Arc(50, 50, 30, 0, 180)]
+    doc = build_dxf([], [], arcs, [], config)
+    msp = doc.modelspace()
+    entities = list(msp)
+    assert len(entities) == 1
+    assert entities[0].dxftype() == "ARC"
+
+
+def test_dxf_with_polyline():
+    from tdv.geometry.models import Polyline
+
+    config = DxfExportConfig()
+    polylines = [Polyline([(0, 0), (100, 0), (100, 100)], closed=True)]
+    doc = build_dxf([], [], [], polylines, config)
+    msp = doc.modelspace()
+    entities = list(msp)
+    assert len(entities) == 1
+    assert entities[0].dxftype() == "LWPOLYLINE"
+
+
+def test_dxf_save(tmp_path):
+    from tdv.geometry.models import Line
+
+    config = DxfExportConfig()
+    lines = [Line(0, 0, 100, 100)]
+    doc = build_dxf(lines, [], [], [], config)
+    save_dxf(tmp_path / "test.dxf", doc)
     assert (tmp_path / "test.dxf").exists()
+    assert (tmp_path / "test.dxf").stat().st_size > 0

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from tdv.config import PipelineConfig
+from tdv.export.dxf import build_dxf, save_dxf
 from tdv.export.svg import build_svg, save_svg
 from tdv.geometry.arcs import detect_arcs
 from tdv.geometry.circles import detect_circles
@@ -74,6 +75,7 @@ def vectorize(
     svg_content = ""
     overlay_path = out / f"{stem}_overlay.png"
     report_path = out / f"{stem}_report.html"
+    dxf_path = out / f"{stem}.dxf"
 
     if config.export.enabled:
         # Phase 3: Export SVG
@@ -90,6 +92,14 @@ def vectorize(
         )
         svg_path = out / f"{stem}.svg"
         save_svg(svg_path, svg_content)
+
+        # DXF export
+        if config.export.dxf.enabled:
+            doc = build_dxf(
+                final_lines, final_circles, final_arcs, final_polylines,
+                config.export.dxf,
+            )
+            save_dxf(dxf_path, doc)
 
         # Overlay
         overlay = draw_overlay(
@@ -117,6 +127,7 @@ def vectorize(
             "svg": str(out / f"{stem}.svg"),
             "overlay": str(overlay_path),
             "report": str(report_path),
+            "dxf": str(dxf_path),
         },
     }
     return result

@@ -122,6 +122,10 @@ class SvgExportConfig(BaseModel):
 
 class DxfExportConfig(BaseModel):
     enabled: bool = False
+    layer_lines: str = "LINES"
+    layer_circles: str = "CIRCLES"
+    layer_arcs: str = "ARCS"
+    layer_polylines: str = "POLYLINES"
 
 
 class ExportConfig(BaseModel):
