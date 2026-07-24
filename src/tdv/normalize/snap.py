@@ -21,7 +21,7 @@ def snap_lines(lines: list[Line], config: SnapConfig) -> list[Line]:
 
 
 def _closest_endpoints(l1: Line, l2: Line) -> tuple[float, bool, bool]:
-    def dist(x1, y1, x2, y2):
+    def dist(x1: float, y1: float, x2: float, y2: float) -> float:
         return math.hypot(x2 - x1, y2 - y1)
 
     d11 = dist(l1.x1, l1.y1, l2.x1, l2.y1)

@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import Any
+
 import cv2
 import numpy as np
 
@@ -5,7 +9,7 @@ from tdv.config import ContoursConfig
 from tdv.geometry.models import Polyline
 
 
-def detect_contours(image: np.ndarray, config: ContoursConfig) -> list[Polyline]:
+def detect_contours(image: np.ndarray[Any, Any], config: ContoursConfig) -> list[Polyline]:
     if not config.enabled:
         return []
     contours, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)

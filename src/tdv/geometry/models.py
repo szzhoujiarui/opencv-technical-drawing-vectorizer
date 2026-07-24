@@ -17,7 +17,7 @@ class Line:
     def from_dict(d: dict[str, Any]) -> Line:
         return Line(d["x1"], d["y1"], d["x2"], d["y2"])
 
-    def sort_key(self) -> tuple:
+    def sort_key(self) -> tuple[float, float, float, float]:
         return (self.x1, self.y1, self.x2, self.y2)
 
 
@@ -36,7 +36,7 @@ class Circle:
     def from_dict(d: dict[str, Any]) -> Circle:
         return Circle(d["cx"], d["cy"], d["r"])
 
-    def sort_key(self) -> tuple:
+    def sort_key(self) -> tuple[float, float, float]:
         return (self.cx, self.cy, self.r)
 
 
@@ -68,7 +68,7 @@ class Arc:
             d.get("end_angle", d.get("end", 0.0)),
         )
 
-    def sort_key(self) -> tuple:
+    def sort_key(self) -> tuple[float, float, float, float, float]:
         return (self.cx, self.cy, self.r, self.start_angle, self.end_angle)
 
 
@@ -91,6 +91,6 @@ class Polyline:
         pts = [(p[0], p[1]) for p in d["points"]]
         return Polyline(pts, d.get("closed", False))
 
-    def sort_key(self) -> tuple:
+    def sort_key(self) -> tuple[float, ...]:
         flat = [coord for pt in self.points for coord in pt]
         return tuple(flat)

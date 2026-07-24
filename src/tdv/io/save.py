@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from pathlib import Path
 from typing import Any
@@ -6,7 +8,7 @@ import cv2
 import numpy as np
 
 
-def save_intermediate(path: str | Path, image: np.ndarray) -> None:
+def save_intermediate(path: str | Path, image: np.ndarray[Any, Any]) -> None:
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     cv2.imwrite(str(path), image)
 

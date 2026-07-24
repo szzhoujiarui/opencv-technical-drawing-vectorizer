@@ -1,11 +1,14 @@
+from __future__ import annotations
+
 from pathlib import Path
+from typing import Any
 
 import cv2
 import numpy as np
 import pypdfium2 as pdfium
 
 
-def read_image(path: str | Path, pdf_dpi: int = 200) -> np.ndarray:
+def read_image(path: str | Path, pdf_dpi: int = 200) -> np.ndarray[Any, Any]:
     path = Path(path)
     ext = path.suffix.lower()
     if ext == ".pdf":
@@ -17,7 +20,7 @@ def read_image(path: str | Path, pdf_dpi: int = 200) -> np.ndarray:
     return img
 
 
-def _read_pdf(path: Path, dpi: int) -> np.ndarray:
+def _read_pdf(path: Path, dpi: int) -> np.ndarray[Any, Any]:
     pdf = pdfium.PdfDocument(str(path))
     if len(pdf) == 0:
         raise ValueError(f"PDF has no pages: {path}")

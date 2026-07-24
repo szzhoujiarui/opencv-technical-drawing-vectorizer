@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import cv2
 import numpy as np
@@ -52,7 +53,7 @@ def build_html_report(
 
 
 def build_side_by_side(
-    images: list[tuple[str, np.ndarray | None]],
+    images: list[tuple[str, np.ndarray[Any, Any] | None]],
     output_path: str | Path,
     scale: float = 0.5,
 ) -> None:

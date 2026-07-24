@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -16,9 +19,9 @@ from tdv.preprocess.threshold import apply_threshold
 class PreprocessResult:
     def __init__(
         self,
-        cleaned: np.ndarray,
-        stages: dict[str, np.ndarray],
-        perspective_rect: np.ndarray | None = None,
+        cleaned: np.ndarray[Any, Any],
+        stages: dict[str, np.ndarray[Any, Any]],
+        perspective_rect: np.ndarray[Any, Any] | None = None,
     ) -> None:
         self.cleaned = cleaned
         self.stages = stages
@@ -29,7 +32,7 @@ def run_preprocess(
     path: str | Path, config: PipelineConfig, out_dir: str | Path | None = None
 ) -> PreprocessResult:
     img = read_image(path, config.pdf_dpi)
-    stages: dict[str, np.ndarray] = {"input": img.copy()}
+    stages: dict[str, np.ndarray[Any, Any]] = {"input": img.copy()}
     current = img.copy()
 
     if config.preprocess.grayscale:

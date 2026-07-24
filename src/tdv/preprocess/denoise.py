@@ -1,10 +1,14 @@
+from __future__ import annotations
+
+from typing import Any
+
 import cv2
 import numpy as np
 
 from tdv.config import DenoiseConfig
 
 
-def denoise(image: np.ndarray, config: DenoiseConfig) -> np.ndarray:
+def denoise(image: np.ndarray[Any, Any], config: DenoiseConfig) -> np.ndarray[Any, Any]:
     if not config.enabled:
         return image
     if config.method == "fastNlMeans":

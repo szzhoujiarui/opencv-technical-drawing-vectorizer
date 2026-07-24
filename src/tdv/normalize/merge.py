@@ -15,7 +15,7 @@ def angle_between(l1: Line, l2: Line) -> float:
 
 
 def endpoint_distance(l1: Line, l2: Line) -> float:
-    def _dist(x1, y1, x2, y2):
+    def _dist(x1: float, y1: float, x2: float, y2: float) -> float:
         return math.hypot(x2 - x1, y2 - y1)
 
     d11 = _dist(l1.x1, l1.y1, l2.x1, l2.y1)

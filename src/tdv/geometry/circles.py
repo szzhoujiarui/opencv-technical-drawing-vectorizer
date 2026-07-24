@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import Any
+
 import cv2
 import numpy as np
 
@@ -5,7 +9,7 @@ from tdv.config import CirclesConfig
 from tdv.geometry.models import Circle
 
 
-def detect_circles(image: np.ndarray, config: CirclesConfig) -> list[Circle]:
+def detect_circles(image: np.ndarray[Any, Any], config: CirclesConfig) -> list[Circle]:
     if not config.enabled:
         return []
     circles = cv2.HoughCircles(
@@ -30,7 +34,7 @@ def detect_circles(image: np.ndarray, config: CirclesConfig) -> list[Circle]:
 
 
 def _circumference_coverage(
-    image: np.ndarray, cx: float, cy: float, r: float
+    image: np.ndarray[Any, Any], cx: float, cy: float, r: float
 ) -> float:
     h, w = image.shape
     n = 360

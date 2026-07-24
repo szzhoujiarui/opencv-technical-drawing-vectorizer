@@ -1,10 +1,14 @@
+from __future__ import annotations
+
+from typing import Any
+
 import cv2
 import numpy as np
 
 from tdv.config import DeskewConfig
 
 
-def deskew(image: np.ndarray, config: DeskewConfig) -> tuple[np.ndarray, float]:
+def deskew(image: np.ndarray[Any, Any], config: DeskewConfig) -> tuple[np.ndarray[Any, Any], float]:
     if not config.enabled:
         return image, 0.0
     angle = _estimate_skew(image)
@@ -15,7 +19,7 @@ def deskew(image: np.ndarray, config: DeskewConfig) -> tuple[np.ndarray, float]:
     return _rotate(image, angle), angle
 
 
-def _estimate_skew(image: np.ndarray) -> float:
+def _estimate_skew(image: np.ndarray[Any, Any]) -> float:
     h, w = image.shape[:2]
     min_len = max(20, w // 8)
     lines = cv2.HoughLinesP(
@@ -47,7 +51,7 @@ def _estimate_skew(image: np.ndarray) -> float:
     return 0.0
 
 
-def _rotate(image: np.ndarray, angle: float) -> np.ndarray:
+def _rotate(image: np.ndarray[Any, Any], angle: float) -> np.ndarray[Any, Any]:
     h, w = image.shape[:2]
     center = (w // 2, h // 2)
     rot = cv2.getRotationMatrix2D(center, angle, 1.0)

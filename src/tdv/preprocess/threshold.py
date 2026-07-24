@@ -1,10 +1,14 @@
+from __future__ import annotations
+
+from typing import Any
+
 import cv2
 import numpy as np
 
 from tdv.config import ThresholdConfig
 
 
-def apply_threshold(image: np.ndarray, config: ThresholdConfig) -> np.ndarray:
+def apply_threshold(image: np.ndarray[Any, Any], config: ThresholdConfig) -> np.ndarray[Any, Any]:
     if config.method == "adaptive":
         thresh = cv2.adaptiveThreshold(
             image,

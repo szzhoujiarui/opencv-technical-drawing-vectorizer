@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import Any
+
 import cv2
 import numpy as np
 
@@ -5,7 +9,7 @@ from tdv.config import LinesConfig
 from tdv.geometry.models import Line
 
 
-def detect_lines(image: np.ndarray, config: LinesConfig) -> list[Line]:
+def detect_lines(image: np.ndarray[Any, Any], config: LinesConfig) -> list[Line]:
     if not config.enabled:
         return []
     lines_p = cv2.HoughLinesP(

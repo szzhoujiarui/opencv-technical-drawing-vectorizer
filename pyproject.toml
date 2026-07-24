@@ -72,7 +72,6 @@ module = ["tdv.preprocess.grayscale", "tdv.preprocess.denoise", "tdv.preprocess.
           "tdv.report.metrics",
           "tdv.normalize.snap", "tdv.normalize.merge", "tdv.normalize.filter"]
 ignore_missing_imports = true
-disable_error_code = ["no-untyped-def", "no-untyped-call", "no-any-return", "type-arg", "call-overload"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import Any
+
 import cv2
 import numpy as np
 
@@ -5,8 +9,8 @@ from tdv.config import PerspectiveConfig
 
 
 def correct_perspective(
-    image: np.ndarray, config: PerspectiveConfig
-) -> tuple[np.ndarray, np.ndarray | None]:
+    image: np.ndarray[Any, Any], config: PerspectiveConfig
+) -> tuple[np.ndarray[Any, Any], np.ndarray[Any, Any] | None]:
     if not config.enabled:
         return image, None
     contours, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -31,8 +35,8 @@ def correct_perspective(
     bottom = np.linalg.norm(br - bl)
     left = np.linalg.norm(bl - tl)
     right = np.linalg.norm(br - tr)
-    ratio_w = max(top, bottom) / max(min(top, bottom), 1.0)
-    ratio_h = max(left, right) / max(min(left, right), 1.0)
+    ratio_w = max(float(top), float(bottom)) / max(min(float(top), float(bottom)), 1.0)
+    ratio_h = max(float(left), float(right)) / max(min(float(left), float(right)), 1.0)
     if ratio_w < 1.03 and ratio_h < 1.03:
         return image, None
 
@@ -50,7 +54,7 @@ def correct_perspective(
     return result, rect
 
 
-def _order_points(pts: np.ndarray) -> np.ndarray:
+def _order_points(pts: np.ndarray[Any, Any]) -> np.ndarray[Any, Any]:
     rect = np.zeros((4, 2), dtype=np.float32)
     s = pts.sum(axis=1)
     rect[0] = pts[np.argmin(s)]

@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import Any
+
 import cv2
 import numpy as np
 
@@ -5,7 +9,7 @@ from tdv.config import ArcsConfig
 from tdv.geometry.models import Arc
 
 
-def detect_arcs(image: np.ndarray, config: ArcsConfig) -> list[Arc]:
+def detect_arcs(image: np.ndarray[Any, Any], config: ArcsConfig) -> list[Arc]:
     if not config.enabled:
         return []
     result: list[Arc] = []
@@ -21,7 +25,7 @@ def detect_arcs(image: np.ndarray, config: ArcsConfig) -> list[Arc]:
 
 
 def _detect_from_contours(
-    image: np.ndarray, config: ArcsConfig, result: list[Arc]
+    image: np.ndarray[Any, Any], config: ArcsConfig, result: list[Arc]
 ) -> None:
     contours, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     for cnt in contours:
@@ -48,7 +52,7 @@ def _detect_from_contours(
 
 
 def _detect_from_hough(
-    image: np.ndarray, config: ArcsConfig, result: list[Arc]
+    image: np.ndarray[Any, Any], config: ArcsConfig, result: list[Arc]
 ) -> None:
     circles = cv2.HoughCircles(
         image,
@@ -82,7 +86,7 @@ def _detect_from_hough(
 # ---- Helpers ----
 
 
-def _fit_circle(pts: np.ndarray) -> tuple[float, float, float, float] | None:
+def _fit_circle(pts: np.ndarray[Any, Any]) -> tuple[float, float, float, float] | None:
     n = len(pts)
     x = pts[:, 0].astype(np.float64)
     y = pts[:, 1].astype(np.float64)
@@ -112,7 +116,7 @@ def _already_detected(
 
 
 def _angular_coverage(
-    image: np.ndarray, cx: float, cy: float, r: float
+    image: np.ndarray[Any, Any], cx: float, cy: float, r: float
 ) -> tuple[float, float, float] | None:
     h, w = image.shape
     n = 360
@@ -140,7 +144,7 @@ def _angular_coverage(
 
 
 def _longest_run(
-    arr: np.ndarray,
+    arr: np.ndarray[Any, Any],
 ) -> tuple[int, int, int]:
     double = np.concatenate([arr, arr])
     max_len = 0

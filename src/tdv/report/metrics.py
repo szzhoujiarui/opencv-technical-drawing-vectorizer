@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from typing import Any
+from typing import Any, cast
 
 from tdv.config import MetricsConfig
 from tdv.geometry.models import Arc, Circle, Line, Polyline
@@ -10,25 +10,25 @@ from tdv.geometry.models import Arc, Circle, Line, Polyline
 def _ensure_line(d: Any) -> Line:
     if isinstance(d, dict):
         return Line.from_dict(d)
-    return d
+    return cast(Line, d)
 
 
 def _ensure_circle(d: Any) -> Circle:
     if isinstance(d, dict):
         return Circle.from_dict(d)
-    return d
+    return cast(Circle, d)
 
 
 def _ensure_arc(d: Any) -> Arc:
     if isinstance(d, dict):
         return Arc.from_dict(d)
-    return d
+    return cast(Arc, d)
 
 
 def _ensure_polyline(d: Any) -> Polyline:
     if isinstance(d, dict):
         return Polyline.from_dict(d)
-    return d
+    return cast(Polyline, d)
 
 
 def evaluate(
@@ -178,7 +178,7 @@ def _line_angle_diff(l1: Line, l2: Line) -> float:
 
 
 def _line_endpoint_dist(l1: Line, l2: Line) -> float:
-    def dist(x1, y1, x2, y2):
+    def dist(x1: float, y1: float, x2: float, y2: float) -> float:
         return math.hypot(x2 - x1, y2 - y1)
 
     d1 = (dist(l1.x1, l1.y1, l2.x1, l2.y1) + dist(l1.x2, l1.y2, l2.x2, l2.y2)) / 2.0
