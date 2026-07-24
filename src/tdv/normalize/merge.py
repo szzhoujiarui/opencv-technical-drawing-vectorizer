@@ -25,12 +25,59 @@ def endpoint_distance(l1: Line, l2: Line) -> float:
     return min(d11, d12, d21, d22)
 
 
+def _perpendicular_distance(l1: Line, l2: Line) -> float:
+    dx = l1.x2 - l1.x1
+    dy = l1.y2 - l1.y1
+    den = math.hypot(dx, dy)
+    if den == 0:
+        mx = (l2.x1 + l2.x2) / 2
+        my = (l2.y1 + l2.y2) / 2
+        return min(
+            math.hypot(mx - l1.x1, my - l1.y1),
+            math.hypot(mx - l1.x2, my - l1.y2),
+        )
+    mx = (l2.x1 + l2.x2) / 2
+    my = (l2.y1 + l2.y2) / 2
+    return abs(dy * (mx - l1.x1) - dx * (my - l1.y1)) / den
+
+
+def _project_t(px: float, py: float, l1: Line) -> float:
+    dx = l1.x2 - l1.x1
+    dy = l1.y2 - l1.y1
+    return ((px - l1.x1) * dx + (py - l1.y1) * dy) / (dx * dx + dy * dy)
+
+
+def _overlaps_on_projection(l1: Line, l2: Line) -> bool:
+    t21 = _project_t(l2.x1, l2.y1, l1)
+    t22 = _project_t(l2.x2, l2.y2, l1)
+    lo = min(t21, t22)
+    hi = max(t21, t22)
+    return lo <= 1.0 and hi >= 0.0
+
+
 def are_collinear(l1: Line, l2: Line, angle_tol: float, dist_tol: float) -> bool:
-    return angle_between(l1, l2) < math.radians(angle_tol) and endpoint_distance(l1, l2) < dist_tol
+    if angle_between(l1, l2) >= math.radians(angle_tol):
+        return False
+    if _perpendicular_distance(l1, l2) >= dist_tol:
+        return False
+    return _overlaps_on_projection(l1, l2)
 
 
 def are_duplicate(l1: Line, l2: Line, angle_tol: float, dist_tol: float) -> bool:
     return angle_between(l1, l2) < math.radians(angle_tol) and endpoint_distance(l1, l2) < dist_tol
+
+
+def _extended_endpoints(l1: Line, lines: list[Line]) -> tuple[float, float, float, float]:
+    dx = l1.x2 - l1.x1
+    dy = l1.y2 - l1.y1
+    ts = []
+    for ln in lines:
+        ts.append(_project_t(ln.x1, ln.y1, l1))
+        ts.append(_project_t(ln.x2, ln.y2, l1))
+    t_min = min(ts)
+    t_max = max(ts)
+    return (l1.x1 + t_min * dx, l1.y1 + t_min * dy,
+            l1.x1 + t_max * dx, l1.y1 + t_max * dy)
 
 
 def merge_lines(lines: list[Line], config: MergeConfig) -> list[Line]:
@@ -42,21 +89,23 @@ def merge_lines(lines: list[Line], config: MergeConfig) -> list[Line]:
     for i, l1 in enumerate(lines):
         if used[i]:
             continue
-        x1, y1 = l1.x1, l1.y1
-        x2, y2 = l1.x2, l1.y2
         used[i] = True
-        for j in range(i + 1, len(lines)):
-            if used[j]:
-                continue
-            l2 = lines[j]
-            if are_collinear(l1, l2, config.collinear_angle_tol, config.collinear_dist_tol):
-                all_x = [x1, x2, l2.x1, l2.x2]
-                all_y = [y1, y2, l2.y1, l2.y2]
-                min_idx = min(range(4), key=lambda k: all_x[k] + all_y[k])
-                max_idx = max(range(4), key=lambda k: all_x[k] + all_y[k])
-                x1, y1 = all_x[min_idx], all_y[min_idx]
-                x2, y2 = all_x[max_idx], all_y[max_idx]
-                used[j] = True
+        group = [l1]
+        cur = l1
+        changed = True
+        while changed:
+            changed = False
+            for j in range(len(lines)):
+                if used[j]:
+                    continue
+                l2 = lines[j]
+                if are_collinear(cur, l2, config.collinear_angle_tol, config.collinear_dist_tol):
+                    group.append(l2)
+                    used[j] = True
+                    cx1, cy1, cx2, cy2 = _extended_endpoints(cur, [cur, l2])
+                    cur = Line(cx1, cy1, cx2, cy2)
+                    changed = True
+        x1, y1, x2, y2 = _extended_endpoints(cur, group)
         merged.append(Line(x1, y1, x2, y2))
     merged.sort(key=lambda ln: ln.sort_key())
     return merged

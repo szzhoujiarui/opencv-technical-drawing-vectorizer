@@ -84,7 +84,7 @@ class GeometryConfig(BaseModel):
 
 class MergeConfig(BaseModel):
     collinear_angle_tol: float = 3.0
-    collinear_dist_tol: float = 8.0
+    collinear_dist_tol: float = 5.0
     duplicate_angle_tol: float = 3.0
     duplicate_dist_tol: float = 8.0
 

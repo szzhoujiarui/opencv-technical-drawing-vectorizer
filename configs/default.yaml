@@ -56,7 +56,7 @@ geometry:
 normalize:
   merge:
     collinear_angle_tol: 3.0     # degrees
-    collinear_dist_tol: 8.0      # px
+    collinear_dist_tol: 5.0      # px; perpendicular distance from l2 midpoint to l1 infinite line
     duplicate_angle_tol: 3.0
     duplicate_dist_tol: 8.0
   snap:
