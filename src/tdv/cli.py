@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import importlib.resources
 import logging
 import sys
 import time
 from pathlib import Path
 from typing import Any
+
+import yaml
 
 from tdv.config import PipelineConfig
 from tdv.export.dxf import build_dxf, save_dxf
@@ -16,6 +19,7 @@ from tdv.geometry.contours import detect_contours
 from tdv.geometry.lines import detect_lines
 from tdv.io.load import read_pdf_pages
 from tdv.io.save import save_json
+from tdv.normalize.dedup import dedup_primitives
 from tdv.normalize.filter import filter_arcs, filter_circles, filter_lines, filter_polylines
 from tdv.normalize.merge import merge_lines
 from tdv.normalize.snap import snap_lines
@@ -48,23 +52,25 @@ def vectorize(
 
     # Phase 2: Geometry extraction
     raw_lines = detect_lines(cleaned, config.geometry.lines)
-    max_lines = config.geometry.lines.max_count
-    if max_lines and len(raw_lines) > max_lines:
-        logger.warning("Too many lines (%d), truncating to %d", len(raw_lines), max_lines)
-        raw_lines = raw_lines[:max_lines]
     raw_circles = detect_circles(cleaned, config.geometry.circles)
     raw_arcs = detect_arcs(cleaned, config.geometry.arcs)
     raw_polylines = detect_contours(cleaned, config.geometry.contours)
 
     # Normalize
     merged = merge_lines(raw_lines, config.normalize.merge)
+    # Truncate after merging: cutting before merge would let duplicate raw
+    # segments crowd out distinct merged lines within the max_count budget.
+    max_lines = config.geometry.lines.max_count
+    if max_lines and len(merged) > max_lines:
+        logger.warning("Too many lines (%d), truncating to %d", len(merged), max_lines)
+        merged = merged[:max_lines]
     snapped = snap_lines(merged, config.normalize.snap)
     final_lines = filter_lines(snapped, config.normalize.filter)
     final_circles = filter_circles(raw_circles, config.normalize.filter)
     final_arcs = filter_arcs(raw_arcs, config.normalize.filter)
     final_polylines = filter_polylines(raw_polylines, config.normalize.filter)
-    final_circles = _dedup_circles_arcs(
-        final_circles, final_arcs, config.metrics.circle_center_tol
+    final_lines, final_circles, final_arcs, final_polylines = dedup_primitives(
+        final_lines, final_circles, final_arcs, final_polylines, config.normalize.dedup
     )
 
     primitives = {
@@ -78,6 +84,7 @@ def vectorize(
     save_json(json_path, primitives, config.precision)
 
     svg_content = ""
+    svg_path = out / f"{stem}.svg"
     overlay_path = out / f"{stem}_overlay.png"
     report_path = out / f"{stem}_report.html"
     dxf_path = out / f"{stem}.dxf"
@@ -95,14 +102,17 @@ def vectorize(
             config.export.svg,
             config.precision,
         )
-        svg_path = out / f"{stem}.svg"
         save_svg(svg_path, svg_content)
 
         # DXF export
         if config.export.dxf.enabled:
             doc = build_dxf(
-                final_lines, final_circles, final_arcs, final_polylines,
+                final_lines,
+                final_circles,
+                final_arcs,
+                final_polylines,
                 config.export.dxf,
+                image_height=h,
             )
             save_dxf(dxf_path, doc)
 
@@ -117,23 +127,31 @@ def vectorize(
         )
         save_overlay(overlay_path, overlay)
 
-        # Side-by-side HTML report
+        # Side-by-side HTML report; degrade gracefully when stage PNGs are absent.
         cleaned_path = stages_dir / "stage_perspective.png"
-        report_html = build_html_report(input_path, overlay_path, cleaned_path, svg_path)
+        report_html = build_html_report(
+            input_path,
+            overlay_path,
+            cleaned_path if cleaned_path.exists() else None,
+            svg_path,
+        )
         Path(report_path).write_text(report_html)
+
+    # Report only paths that were actually written.
+    paths: dict[str, str] = {"json": str(json_path)}
+    if config.export.enabled:
+        paths["svg"] = str(svg_path)
+        paths["overlay"] = str(overlay_path)
+        paths["report"] = str(report_path)
+        if config.export.dxf.enabled:
+            paths["dxf"] = str(dxf_path)
 
     result = {
         "input": str(input_path),
         "output_dir": str(out),
         "primitives": primitives,
         "svg": svg_content,
-        "paths": {
-            "json": str(json_path),
-            "svg": str(out / f"{stem}.svg"),
-            "overlay": str(overlay_path),
-            "report": str(report_path),
-            "dxf": str(dxf_path),
-        },
+        "paths": paths,
     }
     return result
 
@@ -153,30 +171,27 @@ def _vectorize_image(
 
     stages_dir = out / "stages"
     pre_result = run_preprocess_on_array(image, config, out_dir=stages_dir)
-    return vectorize(source_path, config_path, output_dir, preprocess_result=pre_result)
-
-
-def _dedup_circles_arcs(
-    circles: list[Any], arcs: list[Any], tol: float
-) -> list[Any]:
-    if not arcs:
-        return circles
-    return [
-        c
-        for c in circles
-        if not any(
-            abs(c.cx - a.cx) < tol and abs(c.cy - a.cy) < tol and abs(c.r - a.r) < tol
-            for a in arcs
-        )
-    ]
+    # Pass `out` explicitly: falling back to the parent directory would make
+    # multi-page PDF outputs overwrite each other.
+    return vectorize(source_path, config_path, out, preprocess_result=pre_result)
 
 
 def _load_config(path: str | Path | None) -> PipelineConfig:
     if path:
         return PipelineConfig.from_yaml(path)
-    default = Path("configs/default.yaml")
-    if default.exists():
-        return PipelineConfig.from_yaml(default)
+    cwd_config = Path("configs/default.yaml")
+    if cwd_config.exists():
+        return PipelineConfig.from_yaml(cwd_config)
+    # Bundled fallback so the CLI works from any CWD after pip install.
+    try:
+        bundled = importlib.resources.files("tdv").joinpath("data", "default.yaml")
+        if bundled.is_file():
+            with bundled.open("rb") as f:
+                data = yaml.safe_load(f)
+            if data is not None:
+                return PipelineConfig.model_validate(data)
+    except (FileNotFoundError, ModuleNotFoundError):
+        pass
     return PipelineConfig.default()
 
 
@@ -217,7 +232,7 @@ def main() -> None:
             try:
                 pages = read_pdf_pages(inp_path, config.pdf_dpi)
             except Exception as e:
-                logger.error("  FAILED to read PDF: %s", e)
+                logger.error("  FAILED to read PDF: %s", e, exc_info=args.verbose)
                 failures.append(str(inp_path))
                 continue
 
@@ -233,9 +248,9 @@ def main() -> None:
                     )
                     elapsed = time.time() - t0
                     logger.info("    Done in %.2fs", elapsed)
-                    logger.info("    Report: %s", result["paths"]["report"])
+                    logger.info("    Report: %s", result["paths"].get("report", "n/a"))
                 except Exception as e:
-                    logger.error("    FAILED: %s", e)
+                    logger.error("    FAILED: %s", e, exc_info=args.verbose)
                     failures.append(f"{inp_path} page {page_idx}")
         else:
             run_out = Path(args.output) / stem if args.output else None
@@ -248,9 +263,9 @@ def main() -> None:
                 logger.info("  Done in %.2fs", elapsed)
                 logger.debug("  SVG: %s", result["paths"]["svg"])
                 logger.debug("  JSON: %s", result["paths"]["json"])
-                logger.info("  Report: %s", result["paths"]["report"])
+                logger.info("  Report: %s", result["paths"].get("report", "n/a"))
             except Exception as e:
-                logger.error("  FAILED: %s", e)
+                logger.error("  FAILED: %s", e, exc_info=args.verbose)
                 failures.append(str(inp_path))
 
     if failures:

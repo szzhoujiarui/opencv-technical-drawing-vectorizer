@@ -1,5 +1,7 @@
 # Default pipeline configuration for the Technical Drawing Vectorizer.
 # Same input + same config => byte-identical JSON and SVG output.
+# This copy is bundled with the package; configs/default.yaml in the repo
+# root takes precedence when running from a development checkout.
 
 seed: 0
 precision: 4              # decimal places for JSON/SVG float formatting
@@ -18,7 +20,7 @@ preprocess:
     tile_grid_size: [8, 8]
   threshold:
     method: "adaptive"      # adaptive | otsu
-    block_size: 31
+    block_size: 31          # must be odd and >= 3 (cv2 requirement)
     c: 5                    # constant subtracted from mean (adaptive)
     invert: true            # drawings are dark lines on light bg => lines become 255
   deskew:

@@ -15,9 +15,34 @@ def build_dxf(
     arcs: list[Arc],
     polylines: list[Polyline],
     config: DxfExportConfig,
+    image_height: int = 0,
 ) -> Any:
+    """Build a DXF document.
+
+    Image coordinates are y-down while CAD convention is y-up. When
+    ``image_height`` is provided and ``config.flip_y`` is true, point
+    ``(x, y)`` is mapped to ``(x, image_height - y)`` and arc angles are
+    negated so geometry imports upright into CAD software.
+    """
     doc = ezdxf.new("R2010")  # type: ignore[attr-defined]
     msp = doc.modelspace()
+
+    flip = config.flip_y and image_height > 0
+
+    def _y(y: float) -> float:
+        return image_height - y if flip else y
+
+    def _arc_angles(a: Arc) -> tuple[float, float]:
+        if not flip:
+            start, end = a.start_angle, a.end_angle
+        else:
+            # A y-down arc sweeping start->end maps to a y-up arc sweeping
+            # (-end)->(-start); normalize angles and keep the span positive.
+            start = (-a.end_angle) % 360.0
+            end = (-a.start_angle) % 360.0
+        if end <= start:
+            end += 360.0
+        return start, end
 
     layer_lines = config.layer_lines
     layer_circles = config.layer_circles
@@ -31,51 +56,40 @@ def build_dxf(
 
     for ln in lines:
         msp.add_line(
-            (ln.x1, ln.y1),
-            (ln.x2, ln.y2),
+            (ln.x1, _y(ln.y1)),
+            (ln.x2, _y(ln.y2)),
             dxfattribs={"layer": layer_lines},
         )
 
     for c in circles:
         msp.add_circle(
-            (c.cx, c.cy),
+            (c.cx, _y(c.cy)),
             c.r,
             dxfattribs={"layer": layer_circles},
         )
 
     for a in arcs:
-        _add_arc(msp, a, layer_arcs)
+        start_angle, end_angle = _arc_angles(a)
+        msp.add_arc(
+            center=(a.cx, _y(a.cy)),
+            radius=a.r,
+            start_angle=start_angle,
+            end_angle=end_angle,
+            dxfattribs={"layer": layer_arcs},
+        )
 
     for p in polylines:
-        _add_polyline(msp, p, layer_polylines)
+        points = [(x, _y(y)) for x, y in p.points]
+        if not points:
+            continue
+        if p.closed:
+            points = points + [points[0]]
+        msp.add_lwpolyline(
+            points,
+            dxfattribs={"layer": layer_polylines},
+        )
 
     return doc
-
-
-def _add_arc(msp: Any, a: Arc, layer: str) -> None:
-    msp.add_arc(
-        center=(a.cx, a.cy),
-        radius=a.r,
-        start_angle=a.start_angle,
-        end_angle=a.end_angle,
-        dxfattribs={"layer": layer},
-    )
-
-
-def _add_polyline(msp: Any, p: Polyline, layer: str) -> None:
-    if not p.points:
-        return
-    if p.closed:
-        points = list(p.points) + [p.points[0]]
-        msp.add_lwpolyline(
-            [(x, y) for x, y in points],
-            dxfattribs={"layer": layer},
-        )
-    else:
-        msp.add_lwpolyline(
-            [(x, y) for x, y in p.points],
-            dxfattribs={"layer": layer},
-        )
 
 
 def save_dxf(path: str | Path, doc: Any) -> None:

@@ -1,12 +1,16 @@
 import math
 
 import numpy as np
+import pytest
 
-from tdv.config import ArcsConfig, CirclesConfig, LinesConfig, PipelineConfig
-from tdv.geometry.arcs import detect_arcs
+from tdv.config import ArcsConfig, CirclesConfig, LinesConfig, MergeConfig, PipelineConfig
+from tdv.geometry.arcs import _angular_coverage, detect_arcs
 from tdv.geometry.circles import detect_circles
 from tdv.geometry.contours import detect_contours
 from tdv.geometry.lines import detect_lines
+from tdv.geometry.models import Line
+from tdv.normalize import merge as merge_mod
+from tdv.normalize.merge import merge_lines
 
 
 def _binary_canvas(h=200, w=200):
@@ -101,12 +105,109 @@ def test_detect_contours_finds_rectangle():
     assert len(p.points) >= 4, f"Expected >=4 points, got {len(p.points)}"
 
 
-def test_arc_detection_returns_list():
+def test_detect_contours_finds_nested_rectangles():
+    # RETR_LIST must keep inner contours (holes / nested shapes).
+    img = _binary_canvas(300, 300)
+    _draw_rect(img, 50, 50, 250, 250)
+    _draw_rect(img, 100, 100, 200, 200)
+    config = PipelineConfig.default().geometry.contours
+    polylines = detect_contours(img, config)
+    assert len(polylines) >= 2, f"Expected >=2 nested contours, got {len(polylines)}"
+
+
+def test_arc_detection_reports_geometry():
     img = _binary_canvas(300, 300)
     _draw_arc(img, 150, 150, 80, 0, 180)
     config = PipelineConfig.default().geometry.arcs
     arcs = detect_arcs(img, config)
-    assert isinstance(arcs, list)
+    assert arcs, "Expected at least one arc from a drawn half-circle"
+    best = max(arcs, key=lambda a: a.r)
+    assert abs(best.cx - 150) <= 10, f"Center x: expected ~150, got {best.cx}"
+    assert abs(best.cy - 150) <= 10, f"Center y: expected ~150, got {best.cy}"
+    assert abs(best.r - 80) <= 10, f"Radius: expected ~80, got {best.r}"
+    span = best.end_angle - best.start_angle
+    assert 150 <= span <= 210, f"Half circle span: expected ~180, got {span}"
+    for a in arcs:
+        assert a.end_angle > a.start_angle, (
+            f"Degenerate arc with non-positive span: start={a.start_angle}, "
+            f"end={a.end_angle}"
+        )
+
+
+def test_arc_detection_wrapping_span_is_positive():
+    img = _binary_canvas(400, 400)
+    _draw_arc(img, 200, 200, 120, 350, 460)  # 110-degree arc crossing 0 deg
+    config = PipelineConfig.default().geometry.arcs
+    arcs = detect_arcs(img, config)
+    for a in arcs:
+        span = a.end_angle - a.start_angle
+        assert span > 0, (
+            f"Wrapping arc must unwrap to a positive span, got "
+            f"start={a.start_angle}, end={a.end_angle}"
+        )
+
+
+def test_angular_coverage_golden_half_arc():
+    img = np.zeros((400, 400), dtype=np.uint8)
+    cx, cy, r = 200, 200, 100
+    cv2 = pytest_cv2()
+    for deg in range(30, 151):
+        rad = math.radians(deg)
+        x = round(cx + r * math.cos(rad))
+        y = round(cy + r * math.sin(rad))
+        cv2.circle(img, (x, y), 2, 255, -1)
+    result = _angular_coverage(img, cx, cy, r)
+    assert result is not None
+    coverage, start_angle, end_angle = result
+    assert 0.28 <= coverage <= 0.45, f"Coverage: expected ~0.33, got {coverage}"
+    assert 25 <= start_angle <= 35, f"Start angle: expected ~30, got {start_angle}"
+    assert 145 <= end_angle <= 155, f"End angle: expected ~150, got {end_angle}"
+    assert end_angle > start_angle
+
+
+def test_angular_coverage_wrapping_arc_unwrapped():
+    img = np.zeros((400, 400), dtype=np.uint8)
+    cx, cy, r = 200, 200, 100
+    cv2 = pytest_cv2()
+    for deg in range(350, 410):  # 60-degree arc crossing the 0-degree ray
+        rad = math.radians(deg)
+        x = round(cx + r * math.cos(rad))
+        y = round(cy + r * math.sin(rad))
+        cv2.circle(img, (x, y), 2, 255, -1)
+    result = _angular_coverage(img, cx, cy, r)
+    assert result is not None
+    coverage, start_angle, end_angle = result
+    assert 0.13 <= coverage <= 0.22, f"Coverage: expected ~0.17, got {coverage}"
+    span = end_angle - start_angle
+    assert 50 <= span <= 70, f"Wrapping span: expected ~60, got {span}"
+
+
+def test_merge_lines_bucketing_matches_bruteforce():
+    rng = np.random.default_rng(42)
+    lines = []
+    # 4 collinear groups of 3 segments each (must merge into 4 lines).
+    for base_x in (100.0, 400.0, 700.0, 1000.0):
+        y = float(rng.uniform(100, 900))
+        for off in (0.0, 60.0, 120.0):
+            lines.append(Line(base_x + off, y, base_x + off + 50.0, y))
+    # Random noise lines with distinct angles/offsets.
+    for _ in range(300):
+        x1 = float(rng.uniform(0, 1200))
+        y1 = float(rng.uniform(0, 1200))
+        ang = float(rng.uniform(0, math.pi))
+        length = float(rng.uniform(40, 150))
+        lines.append(Line(x1, y1, x1 + length * math.cos(ang), y1 + length * math.sin(ang)))
+    config = MergeConfig()
+    bucketed = merge_lines(lines, config)
+    monkey = pytest.MonkeyPatch()
+    try:
+        monkey.setattr(merge_mod, "_BUCKET_THRESHOLD", 10**9)
+        bruteforce = merge_lines(lines, config)
+    finally:
+        monkey.undo()
+    assert len(bucketed) == len(bruteforce)
+    assert [ln.to_dict() for ln in bucketed] == [ln.to_dict() for ln in bruteforce]
+    assert len(bucketed) <= len(lines)
 
 
 def test_arc_detection_disabled():

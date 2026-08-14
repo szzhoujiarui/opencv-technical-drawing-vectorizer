@@ -65,9 +65,20 @@ def _extended_endpoints(l1: Line, lines: list[Line]) -> tuple[float, float, floa
             l1.x1 + t_max * dx, l1.y1 + t_max * dy)
 
 
+_BUCKET_THRESHOLD = 256
+
+
 def merge_lines(lines: list[Line], config: MergeConfig) -> list[Line]:
     if not lines:
         return []
+    # For large inputs, pre-restrict each line's comparison set via
+    # (angle, rho) bucketing; results are identical to the brute-force path
+    # because bucket widths dominate the merge tolerances (incl. wrap-around
+    # at 0/180 degrees and rho drift from small angle differences).
+    candidate_map = (
+        _build_candidate_map(lines, config) if len(lines) >= _BUCKET_THRESHOLD else None
+    )
+
     merged: list[Line] = []
     used = [False] * len(lines)
 
@@ -80,7 +91,8 @@ def merge_lines(lines: list[Line], config: MergeConfig) -> list[Line]:
         changed = True
         while changed:
             changed = False
-            for j in range(len(lines)):
+            candidates = range(len(lines)) if candidate_map is None else candidate_map[i]
+            for j in candidates:
                 if used[j]:
                     continue
                 l2 = lines[j]
@@ -94,3 +106,45 @@ def merge_lines(lines: list[Line], config: MergeConfig) -> list[Line]:
         merged.append(Line(x1, y1, x2, y2))
     merged.sort(key=lambda ln: ln.sort_key())
     return merged
+
+
+def _line_bucket_params(ln: Line) -> tuple[float, float]:
+    theta = math.atan2(ln.y2 - ln.y1, ln.x2 - ln.x1) % math.pi
+    mx = (ln.x1 + ln.x2) / 2
+    my = (ln.y1 + ln.y2) / 2
+    rho = mx * math.cos(theta) + my * math.sin(theta)
+    return theta, rho
+
+
+def _build_candidate_map(lines: list[Line], config: MergeConfig) -> dict[int, list[int]]:
+    theta_w = max(math.radians(config.collinear_angle_tol), 1e-6)
+    n_theta = max(int(math.ceil(math.pi / theta_w)), 1)
+    # Small angle differences shift a segment's rho by up to R * sin(angle),
+    # so rho buckets must be wider than dist_tol alone.
+    r_max = 0.0
+    params = []
+    for ln in lines:
+        theta, rho = _line_bucket_params(ln)
+        params.append((theta, rho))
+        mx = (ln.x1 + ln.x2) / 2
+        my = (ln.y1 + ln.y2) / 2
+        r_max = max(r_max, math.hypot(mx, my))
+    drift = r_max * math.sin(min(3.0 * theta_w, math.pi / 2))
+    rho_w = max(config.collinear_dist_tol + drift, 1e-6)
+
+    buckets: dict[tuple[int, int], list[int]] = {}
+    for idx, (theta, rho) in enumerate(params):
+        key = (int(theta / theta_w) % n_theta, math.floor(rho / rho_w))
+        buckets.setdefault(key, []).append(idx)
+
+    candidates: dict[int, list[int]] = {}
+    for i, (theta, rho) in enumerate(params):
+        tb = int(theta / theta_w) % n_theta
+        rb = math.floor(rho / rho_w)
+        cand: list[int] = []
+        for dt in (-1, 0, 1):
+            for dr in (-1, 0, 1):
+                cand.extend(buckets.get(((tb + dt) % n_theta, rb + dr), ()))
+        cand.sort()
+        candidates[i] = cand
+    return candidates

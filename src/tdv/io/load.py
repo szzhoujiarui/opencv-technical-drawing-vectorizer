@@ -26,47 +26,49 @@ def read_pdf_pages(
     path: str | Path, pdf_dpi: int = 200, max_dimension: int = 10000
 ) -> list[tuple[int, np.ndarray[Any, Any]]]:
     path = Path(path)
-    pdf = pdfium.PdfDocument(str(path))
-    if len(pdf) == 0:
-        raise ValueError(f"PDF has no pages: {path}")
-    pages: list[tuple[int, np.ndarray[Any, Any]]] = []
-    scale = pdf_dpi / 72.0
-    for i in range(len(pdf)):
-        page = pdf[i]
-        width = int(page.get_width() * scale)
-        height = int(page.get_height() * scale)
-        if width > max_dimension or height > max_dimension:
-            raise ValueError(
-                f"PDF page {i} dimensions ({width}x{height}) exceed {max_dimension}px limit"
+    with pdfium.PdfDocument(str(path)) as pdf:
+        if len(pdf) == 0:
+            raise ValueError(f"PDF has no pages: {path}")
+        pages: list[tuple[int, np.ndarray[Any, Any]]] = []
+        scale = pdf_dpi / 72.0
+        for i in range(len(pdf)):
+            page = pdf[i]
+            width = int(page.get_width() * scale)
+            height = int(page.get_height() * scale)
+            if width > max_dimension or height > max_dimension:
+                raise ValueError(
+                    f"PDF page {i} dimensions ({width}x{height}) exceed {max_dimension}px limit"
+                )
+            bitmap = page.render(scale=scale)
+            # Use the bitmap's actual size: pypdfium2 rounds page dimensions
+            # internally, so int(width * scale) may mismatch and crash reshape.
+            arr = np.frombuffer(bitmap.format_bgra().tobytes(), dtype=np.uint8).reshape(
+                bitmap.height, bitmap.width, 4
             )
-        bitmap = page.render(scale=scale)
-        arr = np.frombuffer(bitmap.format_bgra().tobytes(), dtype=np.uint8).reshape(
-            height, width, 4
-        )
-        bgr = cv2.cvtColor(arr, cv2.COLOR_BGRA2BGR)
-        pages.append((i, bgr))
-    pdf.close()
+            bgr = cv2.cvtColor(arr, cv2.COLOR_BGRA2BGR)
+            pages.append((i, bgr))
     return pages
 
 
 def _read_pdf_page(
     path: Path, dpi: int, page_index: int, max_dimension: int = 10000
 ) -> np.ndarray[Any, Any]:
-    pdf = pdfium.PdfDocument(str(path))
-    if len(pdf) == 0:
-        raise ValueError(f"PDF has no pages: {path}")
-    if page_index >= len(pdf):
-        raise IndexError(f"Page {page_index} out of range (PDF has {len(pdf)} pages)")
-    page = pdf[page_index]
-    scale = dpi / 72.0
-    width = int(page.get_width() * scale)
-    height = int(page.get_height() * scale)
-    if width > max_dimension or height > max_dimension:
-        raise ValueError(
-            f"PDF page {page_index} dimensions ({width}x{height}) exceed {max_dimension}px limit"
+    with pdfium.PdfDocument(str(path)) as pdf:
+        if len(pdf) == 0:
+            raise ValueError(f"PDF has no pages: {path}")
+        if page_index >= len(pdf):
+            raise IndexError(f"Page {page_index} out of range (PDF has {len(pdf)} pages)")
+        page = pdf[page_index]
+        scale = dpi / 72.0
+        width = int(page.get_width() * scale)
+        height = int(page.get_height() * scale)
+        if width > max_dimension or height > max_dimension:
+            raise ValueError(
+                f"PDF page {page_index} dimensions ({width}x{height}) "
+                f"exceed {max_dimension}px limit"
+            )
+        bitmap = page.render(scale=scale)
+        arr = np.frombuffer(bitmap.format_bgra().tobytes(), dtype=np.uint8).reshape(
+            bitmap.height, bitmap.width, 4
         )
-    bitmap = page.render(scale=scale)
-    arr = np.frombuffer(bitmap.format_bgra().tobytes(), dtype=np.uint8).reshape(height, width, 4)
-    bgr = cv2.cvtColor(arr, cv2.COLOR_BGRA2BGR)
-    pdf.close()
-    return bgr
+        return cv2.cvtColor(arr, cv2.COLOR_BGRA2BGR)

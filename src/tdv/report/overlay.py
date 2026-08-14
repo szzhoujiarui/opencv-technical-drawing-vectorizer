@@ -46,13 +46,14 @@ def draw_overlay(
     for c in circles:
         _draw_circle(overlay, c, _hex_to_bgr(config.layer_circles))
     for a in arcs:
+        end_angle = a.end_angle if a.end_angle > a.start_angle else a.end_angle + 360.0
         cv2.ellipse(
             overlay,
             (int(a.cx), int(a.cy)),
             (int(a.r), int(a.r)),
             0,
             a.start_angle,
-            a.end_angle,
+            end_angle,
             _hex_to_bgr(config.layer_arcs),
             2,
             cv2.LINE_AA,

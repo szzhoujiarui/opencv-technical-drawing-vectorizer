@@ -84,7 +84,9 @@ def _svg_arc(a: Arc, fmt: str, color: str, sw: float) -> str:
     y2 = a.cy + a.r * math.sin(end_rad)
     span = (a.end_angle - a.start_angle) % 360
     large = 1 if span > 180 else 0
-    sweep = 1 if span <= 180 else 0
+    # Image coords have y pointing down, so increasing detection angle runs
+    # clockwise, which is exactly SVG's sweep=1 (positive-angle direction).
+    sweep = 1
     return (
         f'    <path d="M {x1:{fmt}} {y1:{fmt}} '
         f'A {a.r:{fmt}} {a.r:{fmt}} 0 {large} {sweep} {x2:{fmt}} {y2:{fmt}}" '
